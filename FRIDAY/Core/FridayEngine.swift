@@ -28,6 +28,19 @@ final class FridayEngine {
     /// user dismisses it or starts another turn.
     private(set) var alert: String?
 
+    /// The language the current turn is in. Carried on the engine rather than
+    /// passed around because the reminder buttons answer outside `submit`, and
+    /// conversing in Hindi and then being told "Added it, boss" in English is
+    /// the kind of seam that makes an assistant feel assembled from parts.
+    private(set) var tongue: Tongue = .english
+
+    /// Whether the streaming reply is worth showing.
+    ///
+    /// False for a Hindi turn: the model produces English, and watching English
+    /// stream past before it is replaced wholesale by the Hindi reply is worse
+    /// than watching the thinking indicator.
+    var streamsVisibly: Bool { tongue == .english }
+
     /// Raised when a turn asks FRIDAY to read something. `ContentView` binds the
     /// picker and the scanner to these, which is why they are not
     /// `private(set)` — dismissing either has to be able to lower its own flag.
@@ -39,6 +52,7 @@ final class FridayEngine {
     let voice = SpeechOutput()
     let reminders: ReminderService
     let language: LanguageEngine
+    let translator = Translator()
     let liveActivity = LiveActivityController()
 
     /// Last thing FRIDAY said, for the expanded Dynamic Island.
@@ -156,8 +170,33 @@ final class FridayEngine {
 
         state = .thinking
 
+        // Hindi is handled on either side of the model, never by it — the model
+        // does not support Hindi and the transcriber cannot even hear it. See
+        // `Translator`. Everything downstream of this line is English, so
+        // `Router`, `Lookup` and the persona are all untouched by bilingual
+        // support.
+        tongue = Bilingual.tongue(of: trimmed)
+        let asked: String
+        if tongue == .hindi {
+            do {
+                asked = try await translator.english(from: trimmed)
+            } catch {
+                // `english(from:)` uses typed throws, so this is already a
+                // `TranslatorFailure` and carries its own spoken line. The
+                // commonest one by far is the pack simply not being downloaded,
+                // which is a Settings trip, not a fault.
+                conversation[replyIndex].text = error.spokenFallback
+                conversation[replyIndex].tone = "concerned"
+                Haptics.failed()
+                await deliver(error.spokenFallback)
+                return
+            }
+        } else {
+            asked = trimmed
+        }
+
         // Swift routes; the model only speaks. See `Intent` for why.
-        let intent = Router.intent(for: trimmed)
+        let intent = Router.intent(for: asked)
 
         // Reading is the one route that needs something from the user before it
         // can answer, so it cannot go through `Lookup` like the others.
@@ -165,7 +204,7 @@ final class FridayEngine {
         // spoken — `deliver` waits on the whole utterance, and it should already
         // be sliding into view while she says this.
         if case .scan(let source) = intent {
-            let answer = await raiseScanner(source)
+            let answer = await voiced(await raiseScanner(source), factual: false)
             conversation[replyIndex].text = answer
             conversation[replyIndex].tone = "calm"
             await deliver(answer)
@@ -173,7 +212,8 @@ final class FridayEngine {
         }
 
         if case .chat = intent {} else {
-            let answer = await lookup(intent)
+            // `factual: true` — these carry the numbers D-44 exists to protect.
+            let answer = await voiced(await lookup(intent), factual: true)
             conversation[replyIndex].text = answer
             conversation[replyIndex].tone = "calm"
             Haptics.replyReceived()
@@ -192,7 +232,8 @@ final class FridayEngine {
             // Racing the turn against a deadline fixes every cause at once
             // rather than the two that can be named, and losing the race lands
             // in the same in-character failure path as any other error.
-            let reply = try await respondWithDeadline(trimmed).get()
+            // `asked`, not `trimmed` — the model only ever sees English.
+            let reply = try await respondWithDeadline(asked).get()
             conversation[replyIndex].text = reply.spoken
             conversation[replyIndex].tone = reply.tone
         } catch let failure as LanguageEngineFailure {
@@ -204,8 +245,26 @@ final class FridayEngine {
             conversation[replyIndex].tone = "concerned"
         }
 
+        // Once, after the catches, so a failure line comes back in his language
+        // too. `factual: false` — a conversational reply has no number D-44
+        // protects, and dropping to English mid-conversation reads worse than a
+        // loosely translated sentence.
+        conversation[replyIndex].text = await voiced(conversation[replyIndex].text, factual: false)
+
         Haptics.replyReceived()
         await deliver(conversation[replyIndex].text)
+    }
+
+    /// Puts a finished English sentence into the language the turn was asked in.
+    ///
+    /// Everything upstream composes in English — `Lookup`, the persona, the
+    /// failure fallbacks — so this is the single place a reply changes language,
+    /// and English turns pass through it untouched.
+    private func voiced(_ english: String, factual: Bool) async -> String {
+        guard tongue == .hindi, !english.isEmpty else { return english }
+        return factual
+            ? await translator.hindiPreservingNumbers(from: english)
+            : (try? await translator.hindi(from: english)) ?? english
     }
 
     /// Runs the tool a routed turn asked for and writes the sentence here.
@@ -335,7 +394,8 @@ final class FridayEngine {
             let line = (error as? TextScanner.ScanError)?.errorDescription
                 ?? "That one wouldn't read, boss."
             conversation.append(ConversationTurn(speaker: .friday,
-                                                 text: Lookup.addressed(line),
+                                                 text: await voiced(Lookup.addressed(line),
+                                                                    factual: false),
                                                  tone: "concerned"))
             Haptics.failed()
             await deliver(conversation[conversation.count - 1].text)
@@ -347,7 +407,10 @@ final class FridayEngine {
         // only puts "boss" in front of it, because the persona contract holds on
         // this path as much as any other.
         guard text.count > Self.readAloudLimit else {
-            let line = "Here's what it says, boss. \(text)"
+            // Only the wrapper changes language. The recognised text is what the
+            // page says and is quoted, not spoken by FRIDAY — translating it
+            // would be inventing a document that does not exist.
+            let line = await voiced("Here's what it says, boss.", factual: false) + " " + text
             conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
             Haptics.replyReceived()
             await deliver(line)
@@ -377,6 +440,8 @@ final class FridayEngine {
             conversation[replyIndex].text = failure.spokenFallback
             conversation[replyIndex].tone = "concerned"
         }
+
+        conversation[replyIndex].text = await voiced(conversation[replyIndex].text, factual: false)
 
         Haptics.replyReceived()
         await deliver(conversation[replyIndex].text)
@@ -411,15 +476,16 @@ final class FridayEngine {
 
     /// User approved the staged reminder. This is the only path that writes.
     func confirmReminder() async {
-        let outcome = await reminders.confirm()
+        let outcome = await voiced(await reminders.confirm(), factual: true)
         guard !outcome.isEmpty else { return }
         conversation.append(ConversationTurn(speaker: .friday, text: outcome, tone: "calm"))
         await deliver(outcome)
     }
 
-    func cancelReminder() {
+    func cancelReminder() async {
         reminders.cancel()
-        conversation.append(ConversationTurn(speaker: .friday, text: "Dropped it, boss.", tone: "calm"))
+        let line = await voiced("Dropped it, boss.", factual: false)
+        conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
     }
 
     // MARK: - Failures

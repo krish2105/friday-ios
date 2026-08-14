@@ -85,7 +85,10 @@ final class SpeechOutput {
         stop()
 
         let utterance = AVSpeechUtterance(string: line)
-        utterance.voice = resolvedVoice()
+        // The voice is chosen from the script of the text itself, so nothing has
+        // to thread "this turn is in Hindi" down from the engine. An English
+        // voice reading Devanagari produces nothing usable.
+        utterance.voice = resolvedVoice(for: Bilingual.tongue(of: line))
         utterance.rate = rate
 
         isSpeaking = true
@@ -132,11 +135,28 @@ final class SpeechOutput {
     }
 
     /// The voice that will actually be used.
-    func resolvedVoice() -> AVSpeechSynthesisVoice? {
+    ///
+    /// The chosen-voice preference only applies to English. It is picked from a
+    /// list of English voices in Settings, and honouring it for a Hindi line
+    /// would have an English voice sounding out Devanagari.
+    func resolvedVoice(for tongue: Tongue = .english) -> AVSpeechSynthesisVoice? {
+        if tongue == .hindi {
+            return bestVoice(matching: "hi") ?? AVSpeechSynthesisVoice(language: "hi-IN")
+        }
         if let voiceIdentifier, let chosen = AVSpeechSynthesisVoice(identifier: voiceIdentifier) {
             return chosen
         }
         return bestInstalledVoice()
+    }
+
+    /// Highest-quality installed voice for a language code, if there is one.
+    ///
+    /// `Lekha` (`hi-IN`) ships installed, so Hindi normally resolves here. There
+    /// is no in-app way to offer a download for a better one, same as English.
+    private func bestVoice(matching code: String) -> AVSpeechSynthesisVoice? {
+        AVSpeechSynthesisVoice.speechVoices()
+            .filter { $0.language.hasPrefix(code) }
+            .max { Self.rank($0.quality) < Self.rank($1.quality) }
     }
 
     private func bestInstalledVoice() -> AVSpeechSynthesisVoice? {

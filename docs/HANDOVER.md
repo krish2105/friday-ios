@@ -1,6 +1,6 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-45, D-53–D-55, §10)
+**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-45, D-53–D-56, §10)
 **Repo state:** `main` @ `d9a0738` · **Commits:** 42
 
 This replaces the previous handover, which was written by a cloud session with no Swift
@@ -92,7 +92,7 @@ session was diagnosed this way in about a minute.
 
 ## 3. What is built
 
-37 Swift files across two targets.
+39 Swift files across two targets.
 
 | Dir | Files | Contents |
 |---|---|---|
@@ -105,6 +105,7 @@ session was diagnosed this way in about a minute.
 | `LiveActivity/` | 3 | `FridayAttributes`, `LiveActivityController`, `FridayLiveActivity` |
 | `Intents/` | 2 | `AskFridayIntent` (+ `FridayAnswer`, `FridayShortcuts`), `StartListeningIntent` |
 | `Vision/` | 2 | `TextScanner`, `DocumentCamera` |
+| `Language/` | 2 | `Bilingual`, `Translator` |
 | `FridayActivity/` | 3 | `FridayActivityBundle` (`@main`), `FridayListenControl`, `FridayLockWidget` |
 
 ### Per-session status
@@ -388,6 +389,50 @@ The old §8 still stands except where noted. New decisions from device work:
     failure would have had no handler at all. The header was not the authority; the compiler
     was.
 
+- **D-56 · Hindi sits either side of the model, never inside it.** Typed Hindi is translated
+  to English before `Router` sees it, and the finished English sentence is translated back
+  before FRIDAY says it. `Router`, `Lookup`, the persona and all 34 truth-table cases are
+  untouched, because nothing downstream of `FridayEngine.submit` ever sees anything but
+  English.
+
+  Forced by what the frameworks actually support, measured on 2026-08-15:
+
+  | Layer | Hindi |
+  |---|---|
+  | `SpeechTranscriber.supportedLocales` | **no** — 30 locales, none Hindi |
+  | `SystemLanguageModel.supportedLanguages` | **no** — 23 languages; `supportsLocale(hi_IN)` false |
+  | `LanguageAvailability.supportedLanguages` | **yes** — 38 languages incl. `hi-Deva-IN`, both ways |
+  | `AVSpeechSynthesisVoice` | **yes** — `Lekha`, `hi-IN` |
+
+  Three consequences worth carrying forward:
+
+  - **Hindi cannot be spoken to her, only typed.** The transcriber has no Hindi locale — not
+    a poor one, none. A platform limit in the same class as the wake word: documented, not
+    worked around. `Bilingual.tongue(of:)` detects Devanagari, so **romanised Hindi ("kya
+    haal hai") reads as English** and goes to the model as-is. Script is deterministic where
+    a statistical recogniser on three words is not, and the wrong answer here costs a good
+    English turn two translation hops.
+  - **D-44 is enforced against the translator, not trusted.** Factual answers carry the
+    numbers D-44 exists to protect, and translating one hands that number back to a model.
+    So `Bilingual.preservesNumbers` checks every digit run survived — folding Devanagari
+    digits onto ASCII, since ८७ preserves 87 perfectly well — and the caller keeps the
+    **English** sentence if one went missing. Right answer in the wrong language beats a
+    fluent Hindi sentence quoting the wrong time. Chat turns skip the check: no number in
+    them is load-bearing, and dropping to English mid-conversation reads worse.
+  - **The pack cannot be downloaded from inside the app.** A session built with
+    `installedSource:` reports `canRequestDownloads == false` and throws
+    `TranslationError.notInstalled`. So `SettingsView` reports the state and points at
+    Settings → Apps → Translate → Downloaded Languages — the same call the Premium voices get,
+    and it avoids needing a SwiftUI-attached session at all.
+
+  One concurrency note. `TranslationSession` is not `Sendable`, so a *stored* one cannot be
+  handed to an `async` method — *"sending `self.session` risks causing data races"*. The
+  compiler is right rather than pedantic: a turn suspends inside `translate`, and the next
+  turn would reach the same session while the first is still in it. A session is therefore
+  built per call and never stored. `@preconcurrency import` would have demoted this to a
+  warning, which is worse twice over — the race stays, and a zero-warning build stops meaning
+  anything.
+
 ### D-18 is now probably unreachable — do not delete it, do not trust it
 
 `LanguageEngine` still carries the full context-overflow path: catch
@@ -446,7 +491,14 @@ call, not the next session's.
    `.other` bug starts from zero again. The temporary diagnostic that found D-53 has been
    deleted (it did its job); if another one is needed, that shape works and took ten minutes.
 7. **`WeatherTool`, D-09 and the paid account** remain the three standing decisions.
-8. **Hindi is not possible for conversational turns, and this is a platform limit.** Measured
+8. **Hindi is built but NOT verified on device.** See D-56. It compiles with zero warnings
+   and its two pure-text pieces pass 18 cases, but no Hindi has ever gone through the app:
+   the language pack is not downloaded on the build Mac, so the translator has never actually
+   run. Until someone downloads Hindi in Settings → Apps → Translate and types a Devanagari
+   sentence, this is compiled-only — per §1, that proves almost nothing. Latency is the first
+   thing to watch: two translation hops land on top of a turn that already races a 20s
+   deadline.
+9. **Superseded — kept for the measurement.** Hindi conversational support. Measured
    on 2026-08-15, not recalled: `SystemLanguageModel.supportedLanguages` returns 23
    languages and Hindi is not among them — `supportsLocale(hi_IN)` is `false`. Independently,
    `SpeechTranscriber.supportedLocales` returns 30 locales with **no** Hindi at all, so it

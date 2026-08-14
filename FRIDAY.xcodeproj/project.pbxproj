@@ -43,6 +43,8 @@
 		AA0000000000000000000841 /* AskFridayIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000741 /* AskFridayIntent.swift */; };
 		AA0000000000000000000850 /* TextScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000750 /* TextScanner.swift */; };
 		AA0000000000000000000851 /* DocumentCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000751 /* DocumentCamera.swift */; };
+		AA0000000000000000000852 /* Bilingual.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000752 /* Bilingual.swift */; };
+		AA0000000000000000000853 /* Translator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000753 /* Translator.swift */; };
 		AA0000000000000000000840 /* Intent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000740 /* Intent.swift */; };
 		AA0000000000000000000830 /* FridayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071F /* FridayAttributes.swift */; };
 		AA0000000000000000000831 /* FridayLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000721 /* FridayLiveActivity.swift */; };
@@ -84,6 +86,8 @@
 		AA0000000000000000000741 /* AskFridayIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskFridayIntent.swift; sourceTree = "<group>"; };
 		AA0000000000000000000750 /* TextScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextScanner.swift; sourceTree = "<group>"; };
 		AA0000000000000000000751 /* DocumentCamera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentCamera.swift; sourceTree = "<group>"; };
+		AA0000000000000000000752 /* Bilingual.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bilingual.swift; sourceTree = "<group>"; };
+		AA0000000000000000000753 /* Translator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Translator.swift; sourceTree = "<group>"; };
 		AA0000000000000000000740 /* Intent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intent.swift; sourceTree = "<group>"; };
 		AA0000000000000000000702 /* FridayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayState.swift; sourceTree = "<group>"; };
 		AA0000000000000000000703 /* FridayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayEngine.swift; sourceTree = "<group>"; };
@@ -156,6 +160,7 @@
 				AA0000000000000000000408 /* LiveActivity */,
 				AA0000000000000000000409 /* Intents */,
 				AA0000000000000000000411 /* Vision */,
+				AA0000000000000000000412 /* Language */,
 				AA0000000000000000000404 /* UI */,
 				AA0000000000000000000709 /* Assets.xcassets */,
 			);
@@ -230,6 +235,15 @@
 				AA000000000000000000071C /* ReminderTool.swift */,
 			);
 			path = Tools;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000412 /* Language */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000752 /* Bilingual.swift */,
+				AA0000000000000000000753 /* Translator.swift */,
+			);
+			path = Language;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000000411 /* Vision */ = {
@@ -375,6 +389,8 @@
 				AA0000000000000000000840 /* Intent.swift in Sources */,
 				AA0000000000000000000850 /* TextScanner.swift in Sources */,
 				AA0000000000000000000851 /* DocumentCamera.swift in Sources */,
+				AA0000000000000000000852 /* Bilingual.swift in Sources */,
+				AA0000000000000000000853 /* Translator.swift in Sources */,
 				AA0000000000000000000841 /* AskFridayIntent.swift in Sources */,
 				AA0000000000000000000842 /* StartListeningIntent.swift in Sources */,
 				AA0000000000000000000803 /* FridayEngine.swift in Sources */,

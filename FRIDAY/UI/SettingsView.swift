@@ -3,6 +3,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Bindable var output: SpeechOutput
+    var translator: Translator
 
     @Environment(\.dismiss) private var dismiss
 
@@ -11,7 +12,9 @@ struct SettingsView: View {
             Form {
                 voiceSection
                 deliverySection
+                hindiSection
             }
+            .task { await translator.refreshAvailability() }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -95,6 +98,34 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Hindi
+    //
+    // Reported rather than offered, for the same reason as the Premium voices
+    // above: there is no API to download a language pack from inside the app.
+    // A session built with `installedSource:` returns `canRequestDownloads ==
+    // false` and throws `notInstalled`, so pointing at Settings is genuinely the
+    // best available.
+
+    private var hindiSection: some View {
+        Section {
+            LabeledContent("Hindi") {
+                switch translator.isDownloaded {
+                case true: Text("Ready").foregroundStyle(.green)
+                case false: Text("Not downloaded").foregroundStyle(.secondary)
+                case nil: ProgressView().controlSize(.small)
+                }
+            }
+        } header: {
+            Text("Languages")
+        } footer: {
+            if translator.isDownloaded == false {
+                Text("Type to FRIDAY in Hindi and she'll answer in Hindi. Download it first in Settings → Apps → Translate → Downloaded Languages.\n\nHindi can't be spoken to her — the on-device transcriber has no Hindi at all, so Hindi has to be typed.")
+            } else {
+                Text("Type to FRIDAY in Hindi and she'll answer in Hindi, out loud. Hindi can't be spoken to her — the on-device transcriber has no Hindi at all, so it has to be typed.")
+            }
+        }
+    }
+
     private var rateLabel: String {
         let normalized = output.rate / AVSpeechUtteranceDefaultSpeechRate
         return String(format: "%.2f×", normalized)
@@ -102,5 +133,5 @@ struct SettingsView: View {
 }
 
 #Preview {
-    SettingsView(output: SpeechOutput())
+    SettingsView(output: SpeechOutput(), translator: Translator())
 }

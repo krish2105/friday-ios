@@ -52,7 +52,7 @@ struct ContentView: View {
 
                 ConversationView(
                     turns: engine.conversation,
-                    streamingText: engine.language.partialSpoken,
+                    streamingText: engine.streamsVisibly ? engine.language.partialSpoken : "",
                     isThinking: isThinking
                 )
                 .frame(maxHeight: .infinity)
@@ -127,7 +127,7 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView(output: engine.voice)
+            SettingsView(output: engine.voice, translator: engine.translator)
         }
         // Out-of-process picking, so this needs no photo library permission and
         // no usage string — the app only ever receives the one image he chose.
@@ -278,7 +278,7 @@ struct ContentView: View {
 
                 HStack(spacing: 10) {
                     Button {
-                        engine.cancelReminder()
+                        Task { await engine.cancelReminder() }
                     } label: {
                         Text("Cancel")
                             .font(.system(size: 14, weight: .medium, design: .rounded))
