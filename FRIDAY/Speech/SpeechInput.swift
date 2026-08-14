@@ -67,7 +67,31 @@ final class SpeechInput {
     /// though transcription is entirely on-device. `SFSpeechRecognizer` is used
     /// here *only* to request authorisation — transcription itself is pure
     /// iOS 26 `SpeechAnalyzer`, with no legacy fallback.
-    static func requestRecognitionAccess() async -> Bool {
+    ///
+    /// `nonisolated` is REQUIRED, and its absence was a hard crash on device.
+    ///
+    /// This type is `@MainActor`, so without it this static func is
+    /// MainActor-isolated and the `requestAuthorization` completion handler
+    /// below inherits that isolation. TCC invokes that handler on its own
+    /// background XPC queue, Swift 6's runtime checks the executor, finds a
+    /// mismatch and traps:
+    ///
+    ///     _dispatch_assert_queue_fail
+    ///     _swift_task_checkIsolatedSwift
+    ///     closure #1 in closure #1 in static SpeechInput.requestRecognitionAccess()
+    ///     TCC __TCCAccessRequest_block_invoke_8
+    ///
+    /// The compiler cannot catch this: isolation inheritance through a
+    /// non-Sendable closure parameter is legal at compile time and only fails
+    /// at runtime, so it survived a zero-warning strict-concurrency build.
+    ///
+    /// Nothing here touches main-actor state — it calls a class method and
+    /// resumes a continuation, both safe from any thread — so dropping the
+    /// isolation is correct rather than a workaround.
+    ///
+    /// Compare `SynthesisObserver` and `LocationFix`: both put their callbacks
+    /// in a separate non-isolated NSObject, which is why neither has this bug.
+    nonisolated static func requestRecognitionAccess() async -> Bool {
         await withCheckedContinuation { continuation in
             SFSpeechRecognizer.requestAuthorization { status in
                 continuation.resume(returning: status == .authorized)
