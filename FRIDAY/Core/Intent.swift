@@ -30,7 +30,7 @@ enum Router {
     static func intent(for input: String) -> Intent {
         let text = input.lowercased()
 
-        if text.contains("remind me") || text.contains("reminder") {
+        if contains(text, ["remind me", "reminder", "remember to", "don't let me forget"]) {
             return .reminder(title: reminderTitle(from: input), when: input)
         }
 
@@ -38,15 +38,19 @@ enum Router {
             return .device(aspect: aspect)
         }
 
-        if contains(text, ["calendar", "schedule", "agenda", "meeting", "event", "what's on today"]) {
+        if contains(text, ["calendar", "schedule", "agenda", "my meetings", "next meeting", "what's on today", "whats on today", "what's on my day"]) {
             return .calendar(day: text.contains("tomorrow") ? "tomorrow" : "today")
         }
 
-        if contains(text, ["what time", "the time", "what's the time", "clock"]) {
+        // "what time" and "the time" are safe; a bare "time" is not — "do I have
+        // time for coffee" must stay a conversation.
+        if contains(text, ["what time", "the time", "what's the time", "whats the time",
+                           "current time", "time is it", "clock"]) {
             return .time(includeDate: false)
         }
 
-        if contains(text, ["what date", "what's the date", "what day", "today's date"]) {
+        if contains(text, ["what date", "what's the date", "whats the date",
+                           "what day", "today's date"]) {
             return .time(includeDate: true)
         }
 
@@ -59,11 +63,24 @@ enum Router {
         needles.contains { text.contains($0) }
     }
 
+    /// Needles are deliberately multi-word where a single word would over-match.
+    /// "hot" alone sent "how hot is it outside" — a weather question — to the
+    /// phone's thermal state, and "space" alone caught every mention of space.
+    /// A missed route falls through to chat, which is a far better failure than
+    /// confidently answering the wrong question.
     private static func deviceAspect(in text: String) -> String? {
-        if contains(text, ["battery", "charge", "charged", "power left"]) { return "battery" }
-        if contains(text, ["storage", "space", "disk", "memory left"]) { return "storage" }
-        if contains(text, ["wifi", "wi-fi", "network", "online", "connection", "internet"]) { return "network" }
-        if contains(text, ["temperature", "thermal", "overheat", "hot"]) { return "temperature" }
+        if contains(text, ["battery", "charging", "charged", "power left", "how much power"]) {
+            return "battery"
+        }
+        if contains(text, ["storage", "disk space", "free space", "space left", "memory left", "how much space"]) {
+            return "storage"
+        }
+        if contains(text, ["wifi", "wi-fi", "network", "am i online", "connection", "internet", "signal"]) {
+            return "network"
+        }
+        if contains(text, ["temperature", "thermal", "overheat", "running hot", "how hot is the phone"]) {
+            return "temperature"
+        }
         return nil
     }
 
