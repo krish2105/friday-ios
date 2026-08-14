@@ -51,7 +51,8 @@ struct CapabilitiesSheet: View {
         ]),
         Group(title: "Languages", items: [
             .init(icon: "character.bubble", name: "Translate", phrase: "How do you say good morning in French"),
-            .init(icon: "text.bubble", name: "Hindi", phrase: "अभी क्या समय है — type it, she answers in Hindi")
+            .init(icon: "text.bubble", name: "Hindi", phrase: "अभी क्या समय है — type it, she answers in Hindi"),
+            .init(icon: "arrow.left.arrow.right.circle", name: "Keep translating", phrase: "Translate into Hindi — then everything, until you say stop")
         ]),
         Group(title: "This phone", items: [
             .init(icon: "battery.75", name: "Battery, storage, signal", phrase: "How's my battery")

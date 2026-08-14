@@ -10,6 +10,9 @@ import SwiftUI
 struct InputBar: View {
     @Binding var text: String
     var isThinking: Bool
+    /// The language being translated into, if the mode is on.
+    var translatingInto: String?
+    var onStopTranslating: () -> Void
     var onSend: () -> Void
     var onAction: (Action) -> Void
 
@@ -50,6 +53,10 @@ struct InputBar: View {
 
     var body: some View {
         VStack(spacing: 10) {
+            if let language = translatingInto {
+                translationBar(language)
+            }
+
             // The row sits above the field rather than replacing it, so nothing
             // he has typed is ever hidden by opening it.
             if isExpanded {
@@ -66,6 +73,40 @@ struct InputBar: View {
             reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.84),
             value: isExpanded
         )
+    }
+
+    /// The mode is visible and has a door.
+    ///
+    /// A persistent mode with no on-screen indicator is a trap, and one whose
+    /// only exit is a phrase is a worse one — while translating, saying the
+    /// wrong words gets them translated rather than understood.
+    private func translationBar(_ language: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "character.bubble.fill")
+                .font(.system(size: 12, weight: .semibold))
+
+            Text("Translating into \(language)")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            Spacer(minLength: 4)
+
+            Button(action: onStopTranslating) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .frame(width: 44, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Stop translating")
+        }
+        .foregroundStyle(FridayTheme.amber)
+        .padding(.leading, 14)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(FridayTheme.amber.opacity(0.12)))
+        .overlay(Capsule().strokeBorder(FridayTheme.amber.opacity(0.32), lineWidth: 1))
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
     // MARK: - The row

@@ -110,6 +110,8 @@ struct ContentView: View {
                         InputBar(
                             text: $typed,
                             isThinking: isThinking,
+                            translatingInto: engine.translatingInto.map(Tongues.name(for:)),
+                            onStopTranslating: { engine.translatingInto = nil },
                             onSend: send,
                             onAction: perform
                         )

@@ -36,6 +36,9 @@ enum Intent: Equatable {
     case reckon(ReckonTool.Sum)
     /// "What's on my clipboard."
     case clipboard
+    /// "Translate into French" — stay in translation until told to stop.
+    case startTranslating(code: String)
+    case stopTranslating
     /// Read whatever he's about to show me. Nothing to look up here — the image
     /// comes from the UI, so `FridayEngine.scan` does the work.
     case scan(source: ScanSource)
@@ -65,6 +68,25 @@ enum Router {
 
         if contains(text, ["remind me", "reminder", "remember to", "don't let me forget"]) {
             return .reminder(title: reminderTitle(from: input), when: input)
+        }
+
+        // Leaving the mode is checked before anything else, because while it is
+        // on every other turn is being translated rather than routed — and a way
+        // out that can itself be swallowed is not a way out.
+        if contains(text, ["stop translating", "stop translation", "stop the translation",
+                           "done translating", "back to normal", "normal mode"]) {
+            return .stopTranslating
+        }
+
+        // Entering the mode. Distinct from the one-shot below by having **no
+        // phrase**: "translate into French" is a request to keep going,
+        // "translate good morning into French" is a request to translate one
+        // thing. The one-shot needs an object; this is what is left when there
+        // isn't one.
+        if contains(text, ["translate into", "translate to", "translating into",
+                           "translating to", "translation mode", "speak in", "talk in"]),
+           let named = Tongues.firstNamed(in: text) {
+            return .startTranslating(code: named.code)
         }
 
         // Before everything else, because a translation request can contain any
@@ -582,6 +604,12 @@ enum Lookup {
                 // Handled by the engine, which owns the notifier. Only Siri
                 // reaches this.
                 return "I'll set that in the app, boss."
+
+            case .startTranslating, .stopTranslating:
+                // A mode is a thing you are *in*, and Siri has nowhere to be in
+                // it — the answer would be spoken once and the mode would have
+                // nowhere to live.
+                return "Open FRIDAY for that one, boss. I'll keep translating there."
 
             case .translate:
                 // Only Siri arrives here, for the same reason as `.scan` below:

@@ -1,6 +1,6 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-09, D-45, D-53–D-67, §10)
+**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-09, D-45, D-53–D-68, §10)
 **Repo state:** `main`, stage 3 landed at `15bca6f` · **Commits:** 47
 
 This replaces the previous handover, which was written by a cloud session with no Swift
@@ -801,13 +801,42 @@ The old §8 still stands except where noted. New decisions from device work:
   The write goes through `CNSaveRequest` and is reachable **only from the Save button** — D-34,
   extended from reminders and calendar to contacts.
 
-  **Still not built from stage 9's design: live translation mode, the share extension, and the
-  Home Screen widget.** The share extension is the one with a real obstacle rather than just
+  **Still not built from stage 9's design: the share extension and the Home Screen widget.** The share extension is the one with a real obstacle rather than just
   cost — an extension hands data to its host app through an **App Group**, which is paid-gated
   (D-52), so it would have to be entirely self-contained and duplicate the reading path into a
   second target. The widget's blocker is smaller but unverified: whether a widget extension
   inherits the app's EventKit and CoreMotion authorisation. **Check that before building it**,
   or the feature dies after the work is done.
+
+- **D-68 · Live translation is a mode, and a mode needs a door.**
+
+  "Translate into Hindi" and every turn afterwards is translated rather than routed, until
+  told to stop. Three decisions carry it:
+
+  - **Mode entry is distinguished from the one-shot by having no object.** "Translate good
+    morning into French" translates one thing; "translate into French" is a request to keep
+    going. The one-shot already required a non-empty phrase, so the mode is precisely what was
+    left over — no new ambiguity, and the truth table proves the pair stay separate. One stale
+    expectation was superseded by this and updated rather than worked around: `translate to
+    french` used to route to chat.
+  - **Only `.stopTranslating` gets out.** While the mode is on, *everything else* — including
+    asking the time — is a phrase to translate, because that is what the mode is. A mode that
+    silently answered some turns and translated others would be unpredictable in the worst
+    way: you would not know which you were getting until it happened.
+  - **The exit is a button, not only a phrase.** A persistent mode with no on-screen indicator
+    is a trap, and one whose only escape is saying the right words is worse — while
+    translating, the wrong words get *translated* rather than understood. `InputBar` shows an
+    amber bar naming the language with an × on it.
+
+  **Two-way works where the scripts differ, and only there.** In Hindi mode the direction is
+  chosen from the script of what was typed: Devanagari goes back to English, anything else
+  goes to Hindi — so you type English and they read Hindi, they type Hindi and you read
+  English, with no switch to remember. It is deliberately **not** attempted for French or
+  Spanish, which share the Latin alphabet with English, because D-56 measured that
+  `NLLanguageRecognizer` cannot be trusted to tell them apart in short phrases. For those the
+  mode is one-way, which is honest and still useful.
+
+  Routing truth table is now **90 cases**.
 
 ### D-18 is now probably unreachable — do not delete it, do not trust it
 

@@ -67,7 +67,12 @@ final class FridayEngine {
 
     /// When set, every turn is translated into this language instead of routed.
     /// Nil is the normal state.
-    private(set) var translatingInto: String?
+    ///
+    /// Not `private(set)`: the mode needs a way out that is a **button**, not a
+    /// phrase. A mode whose only exit is speaking the right words is one you can
+    /// be stuck in — and while translating, the wrong words get translated
+    /// rather than understood.
+    var translatingInto: String?
 
     /// Which photos the picker offers. Screenshots only when the offer raised
     /// it, so he is not hunting through a year of pictures for the one he took
@@ -335,6 +340,36 @@ final class FridayEngine {
         // Swift routes; the model only speaks. See `Intent` for why.
         let intent = Router.intent(for: asked)
 
+        // While translating, everything **except leaving the mode** is a phrase
+        // to translate rather than a question to answer. Checked here, after
+        // routing, so the one intent that can end the mode still gets through —
+        // a mode you cannot leave by speaking is a trap.
+        if let target = translatingInto, !isLeaving(intent) {
+            await translate(trimmed, into: target, at: replyIndex, twoWay: true)
+            return
+        }
+
+        if case .startTranslating(let code) = intent {
+            translatingInto = code
+            let line = "Translating into \(Tongues.name(for: code)) now, boss. Say stop when you're done."
+            conversation[replyIndex].text = await voiced(line, factual: false)
+            conversation[replyIndex].tone = "calm"
+            Haptics.replyReceived()
+            await deliver(conversation[replyIndex].text)
+            return
+        }
+
+        if case .stopTranslating = intent {
+            let was = translatingInto.map(Tongues.name(for:))
+            translatingInto = nil
+            let line = was.map { "Done with the \($0), boss." } ?? "I wasn't translating, boss."
+            conversation[replyIndex].text = line
+            conversation[replyIndex].tone = "calm"
+            Haptics.replyReceived()
+            await deliver(line)
+            return
+        }
+
         // Reading is the one route that needs something from the user before it
         // can answer, so it cannot go through `Lookup` like the others.
         // `raiseScanner` puts the camera or the picker up *before* the reply is
@@ -515,7 +550,48 @@ final class FridayEngine {
     /// matters. The persona contract is not broken so much as inapplicable —
     /// this is a quotation, the same as the recognised text of a scanned page,
     /// which also carries no form of address.
-    private func translate(_ phrase: String, into code: String, at replyIndex: Int) async {
+    /// Whether an intent is the one that ends translation mode.
+    ///
+    /// Only `.stopTranslating` gets out. Everything else — including asking the
+    /// time — is a phrase to translate while the mode is on, because that is
+    /// what the mode *is*. A mode that silently answers some turns and
+    /// translates others would be unpredictable in the worst way: you would not
+    /// know which you were getting until it happened.
+    private func isLeaving(_ intent: Intent) -> Bool {
+        if case .stopTranslating = intent { return true }
+        return false
+    }
+
+    /// Turns a phrase into the other language and speaks it there.
+    ///
+    /// `twoWay` is what makes the mode usable in an actual conversation rather
+    /// than a one-sided broadcast. With it on, the **direction is chosen from
+    /// the script of what was typed**: Devanagari goes back to English, anything
+    /// else goes to the target. So in Hindi mode, you type English and they read
+    /// Hindi, they type Hindi and you read English — one mode, both directions,
+    /// no switch to remember.
+    ///
+    /// It only works where the two languages use different scripts, which is
+    /// exactly why it is not attempted for French or Spanish: those share the
+    /// Latin alphabet with English, and D-56 measured that
+    /// `NLLanguageRecognizer` cannot be trusted to tell them apart in short
+    /// phrases. For those the mode is one-way, which is honest and still useful.
+    private func translate(
+        _ phrase: String,
+        into code: String,
+        at replyIndex: Int,
+        twoWay: Bool = false
+    ) async {
+        var code = code
+
+        if twoWay, code == "hi", Bilingual.tongue(of: phrase) == .hindi {
+            code = "en"
+        }
+
+        await performTranslation(phrase, into: code, at: replyIndex)
+    }
+
+    private func performTranslation(_ phrase: String, into code: String, at replyIndex: Int) async {
         do {
             let translated = try await translator.translate(phrase, into: code)
             conversation[replyIndex].text = translated
