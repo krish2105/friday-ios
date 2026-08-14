@@ -1,6 +1,6 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-45, D-53–D-60, §10)
+**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-45, D-53–D-61, §10)
 **Repo state:** `main`, stage 3 landed at `15bca6f` · **Commits:** 47
 
 This replaces the previous handover, which was written by a cloud session with no Swift
@@ -92,12 +92,12 @@ session was diagnosed this way in about a minute.
 
 ## 3. What is built
 
-49 Swift files across two targets.
+50 Swift files across two targets.
 
 | Dir | Files | Contents |
 |---|---|---|
 | `FRIDAY/` | 1 | `FRIDAYApp.swift` |
-| `Core/` | 6 | `FridayEngine`, `FridayState`, `FridayPersona`, `ConversationTurn`, **`Intent`**, `EventService` |
+| `Core/` | 7 | `FridayEngine`, `FridayState`, `FridayPersona`, `ConversationTurn`, **`Intent`**, `EventService`, `Deadline` |
 | `Intelligence/` | 3 | `Availability`, `Generables`, `LanguageEngine` |
 | `Speech/` | 3 | `AudioSessionManager`, `SpeechInput`, `SpeechOutput` |
 | `Tools/` | 8 | `FridayTool`, `TimeTool`, `DeviceTool`, `WeatherTool`, `CalendarTool`, `ReminderTool`, `ContactTool`, `MotionTool` |
@@ -599,6 +599,39 @@ The old §8 still stands except where noted. New decisions from device work:
   Routing truth table: **65 cases**. It caught "what's this QR code" falling through to chat —
   that phrasing has a noun wedged in *and* no "say" to anchor on, so codes needed a rule of
   their own.
+
+- **D-61 · Recognised text is bounded on screen, and it took a hang to learn why.**
+  Reading a two-page CV out of a PDF **hung the app** on device on 2026-08-15. iOS killed it:
+  `WatchdogEvent: scene-update`, *"exhausted real (wall clock) time allowance of 10.00
+  seconds"*, main thread inside `TransitionHelper.update()`.
+
+  The diagnosis is worth keeping because the obvious suspect was innocent. The report showed
+  **no PDFKit, Vision, model or Speech work on any thread**, and only 41 frames on the main
+  thread — so it was neither slow parsing nor runaway recursion. `SWIFT_VERSION = 6.0` with no
+  `NonisolatedNonsendingByDefault`, so `PDFReader.text` runs on the generic executor and was
+  never on the main thread at all. **The parse was fine; the view was the fault.**
+
+  Root cause: `present(scanned:)` put the *entire* recognised text into one `Text` carrying
+  `.fixedSize(horizontal: false, vertical: true)`, which by definition cannot truncate and
+  must measure every character. That was survivable while the only source was a photographed
+  page. A PDF's text layer is a different order of magnitude — **a two-page CV is 5,400
+  characters and an eight-page document 21,600** — and measuring that inside a running
+  transition blew the ten-second budget.
+
+  Now capped at 1,200 characters with a count of what is not shown. D-44's guarantee survives:
+  it was that a summary can be *checked* against its source, not that every character is
+  rendered — and verification and the model prompt both still run against the **full** text.
+  A view that hangs the app guarantees nothing.
+
+  **The lesson generalises beyond this bug.** Any view that renders model or document output
+  needs a bound, because the length of that output is not something the app chooses. Adding a
+  new *source* of text silently changed the size of the text, and nothing in the type system
+  or the compiler had an opinion about it.
+
+  `Core/Deadline.swift` was added alongside as defence in depth — `readFile` was the one long
+  operation added without a deadline while all its siblings had one. It is not the fix; the
+  cap is. `LanguageEngine.bounded` remains its own private copy, deliberately unrefactored
+  mid-bugfix.
 
 ### D-18 is now probably unreachable — do not delete it, do not trust it
 

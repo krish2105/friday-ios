@@ -398,6 +398,34 @@ final class FridayEngine {
     /// can only reset the session — it cannot make the text fit.
     private static let promptLimit = 4_000
 
+    /// How much recognised text goes **on screen**.
+    ///
+    /// This limit exists because its absence hung the app. A photographed page
+    /// is a page; a PDF's text layer is not, and an eight-page document can be
+    /// tens of thousands of characters — all of which landed in a single `Text`
+    /// carrying `.fixedSize(horizontal: false, vertical: true)`, which by
+    /// definition cannot truncate and must measure the whole thing.
+    ///
+    /// On device, reading a two-page CV stalled the main thread past the
+    /// ten-second scene-update watchdog and iOS killed the app:
+    /// `WatchdogEvent: scene-update`, main thread inside
+    /// `TransitionHelper.update()`, and **no PDFKit, Vision or model work in any
+    /// thread of the report**. The parse was fine. The view was the fault.
+    private static let displayLimit = 1_200
+
+    /// The recognised text, bounded, and honest about what it left out.
+    ///
+    /// D-44's guarantee is that a summary can be *checked* against its source,
+    /// not that every character is rendered. An excerpt that states how much
+    /// more there is keeps that guarantee; a view that hangs the app keeps
+    /// nothing at all. Verification and the model prompt both still run against
+    /// the **full** text — only the display is bounded.
+    private static func excerpt(of text: String) -> String {
+        guard text.count > displayLimit else { return text }
+        return text.prefix(displayLimit)
+            + "…\n\n[\(text.count - displayLimit) more characters not shown]"
+    }
+
     /// Puts the right way of getting a picture on screen, and returns the line
     /// FRIDAY says while it arrives.
     ///
@@ -483,18 +511,36 @@ final class FridayEngine {
         alert = nil
         state = .thinking
 
-        do {
-            let text = try await PDFReader.text(in: url)
+        // Bounded like every other long operation. A scanned PDF is up to eight
+        // pages of OCR, and this was the one path added without a deadline while
+        // all its siblings had one — which would strand `.thinking` and leave a
+        // dead app (HANDOVER §7).
+        let outcome: Result<String, Error>? = await withDeadline(seconds: 45) {
+            do { return .success(try await PDFReader.text(in: url)) }
+            catch { return .failure(error) }
+        }
+
+        switch outcome {
+        case .success(let text):
             await present(scanned: text)
-        } catch {
+
+        case .failure(let error):
             let line = (error as? PDFReader.PDFError)?.errorDescription
                 ?? (error as? TextScanner.ScanError)?.errorDescription
                 ?? "That file wouldn't read, boss."
-            let spoken = await voiced(Lookup.addressed(line), factual: false)
-            conversation.append(ConversationTurn(speaker: .friday, text: spoken, tone: "concerned"))
-            Haptics.failed()
-            await deliver(spoken)
+            await say(Lookup.addressed(line))
+
+        case .none:
+            await say("That file's taking too long, boss. Try a shorter one?")
         }
+    }
+
+    /// One in-character failure line: shown, spoken, and back to idle.
+    private func say(_ line: String) async {
+        let spoken = await voiced(line, factual: false)
+        conversation.append(ConversationTurn(speaker: .friday, text: spoken, tone: "concerned"))
+        Haptics.failed()
+        await deliver(spoken)
     }
 
     /// Text recognised from a picked image, answered like any other turn.
@@ -570,7 +616,7 @@ final class FridayEngine {
            let extracted = await language.receipt(in: text),
            let receipt = ReceiptReader.verified(extracted, against: text) {
             let line = await voiced(ReceiptReader.sentence(for: receipt), factual: true)
-            conversation.append(ConversationTurn(speaker: .friday, text: text, tone: "calm"))
+            conversation.append(ConversationTurn(speaker: .friday, text: Self.excerpt(of: text), tone: "calm"))
             conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
             Haptics.replyReceived()
             await deliver(line)
@@ -584,7 +630,7 @@ final class FridayEngine {
            let extracted = await language.boardingPass(in: text),
            let pass = BoardingPassReader.verified(extracted, against: text) {
             let line = await voiced(BoardingPassReader.sentence(for: pass), factual: true)
-            conversation.append(ConversationTurn(speaker: .friday, text: text, tone: "calm"))
+            conversation.append(ConversationTurn(speaker: .friday, text: Self.excerpt(of: text), tone: "calm"))
             conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
             Haptics.replyReceived()
             await deliver(line)
@@ -608,7 +654,7 @@ final class FridayEngine {
 
         // Too long to hear: the text goes up on its own, unspoken, and the model
         // gets a turn to say what it amounts to.
-        conversation.append(ConversationTurn(speaker: .friday, text: text, tone: "calm"))
+        conversation.append(ConversationTurn(speaker: .friday, text: Self.excerpt(of: text), tone: "calm"))
         conversation.append(ConversationTurn(speaker: .friday, text: "", tone: "calm"))
         let replyIndex = conversation.count - 1
 
