@@ -50,6 +50,8 @@ The tradeoff is real: the on-device model is tuned for utility, not world knowle
 ## Requirements
 
 - iPhone 15 Pro or newer (Foundation Models needs A17 Pro+)
+  - Verified only on iPhone 16 Pro. A17 Pro is the real hardware gate, so
+    15 Pro and 15 Pro Max should work, but that is untested.
 - iOS 26.0 or later
 - **Apple Intelligence enabled** in Settings — the app will not function otherwise
 - Xcode 26 with the iOS 26 SDK

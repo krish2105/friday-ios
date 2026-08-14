@@ -31,7 +31,11 @@ extension AIStatus {
         case .appleIntelligenceOff:
             "Turn on Apple Intelligence in Settings → Apple Intelligence & Siri."
         case .deviceNotEligible:
-            "This iPhone can't run the on-device model. FRIDAY needs an iPhone 16 Pro."
+            // The real gate is A17 Pro, which means iPhone 15 Pro and newer —
+            // not 16 Pro. Owner's call (HANDOVER §9.1): state the accurate
+            // floor here, and note in the README that 16 Pro is the only
+            // device the app has actually been verified on.
+            "This iPhone can't run the on-device model. FRIDAY needs an iPhone 15 Pro or newer."
         case .modelDownloading:
             "The system is still downloading the model. This finishes in the background — try again shortly."
         case .unknown(let detail):
