@@ -67,14 +67,16 @@ final class AIAvailability {
     //
     // ⚠️ This is the ONLY place in the app that touches FoundationModels.
     //
-    // The `UnavailableReason` case names below are the highest-risk API surface
-    // in this project (see CLAUDE.md). They are written from the documented
-    // iOS 26 surface but have NOT been verified against the SDK header on a Mac.
-    // If any name is wrong, the fix is confined to this one switch.
+    // ✅ VERIFIED against the iPhoneOS 26.5 SDK's FoundationModels
+    // .swiftinterface. `UnavailableReason` has exactly three cases and all
+    // three names below are correct:
+    //     case deviceNotEligible
+    //     case appleIntelligenceNotEnabled
+    //     case modelNotReady
     //
-    // Verify with:
-    //   find "$(xcrun --sdk iphoneos --show-sdk-path)/System/Library/Frameworks/FoundationModels.framework" \
-    //     -name "*.swiftinterface" -exec grep -n -B2 -A14 "enum UnavailableReason" {} +
+    // CLAUDE.md calls this the highest-risk API surface in the project, and it
+    // is — but note the compiler already guards it. A wrong case name here is a
+    // build error, not a runtime surprise, so a green build proves this switch.
     //
     // Note: `reason` is intentionally left un-annotated so the compiler infers
     // its type. That way the enum's nesting path — Availability.UnavailableReason

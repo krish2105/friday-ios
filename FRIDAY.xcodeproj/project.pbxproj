@@ -69,8 +69,6 @@
 /* Begin PBXFileReference section */
 		AA0000000000000000000300 /* FRIDAY.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FRIDAY.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000000301 /* FridayActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FridayActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		AA0000000000000000000730 /* FridayActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayActivityBundle.swift; sourceTree = "<group>"; };
-		AA0000000000000000000731 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA0000000000000000000701 /* FRIDAYApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FRIDAYApp.swift; sourceTree = "<group>"; };
 		AA0000000000000000000702 /* FridayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayState.swift; sourceTree = "<group>"; };
 		AA0000000000000000000703 /* FridayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayEngine.swift; sourceTree = "<group>"; };
@@ -101,6 +99,8 @@
 		AA000000000000000000071F /* FridayAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayAttributes.swift; sourceTree = "<group>"; };
 		AA0000000000000000000720 /* LiveActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityController.swift; sourceTree = "<group>"; };
 		AA0000000000000000000721 /* FridayLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayLiveActivity.swift; sourceTree = "<group>"; };
+		AA0000000000000000000730 /* FridayActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayActivityBundle.swift; sourceTree = "<group>"; };
+		AA0000000000000000000731 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -128,15 +128,6 @@
 				AA0000000000000000000410 /* FridayActivity */,
 				AA0000000000000000000405 /* Products */,
 			);
-			sourceTree = "<group>";
-		};
-		AA0000000000000000000410 /* FridayActivity */ = {
-			isa = PBXGroup;
-			children = (
-				AA0000000000000000000730 /* FridayActivityBundle.swift */,
-				AA0000000000000000000731 /* Info.plist */,
-			);
-			path = FridayActivity;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000000401 /* FRIDAY */ = {
@@ -231,6 +222,15 @@
 				AA0000000000000000000721 /* FridayLiveActivity.swift */,
 			);
 			path = LiveActivity;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000410 /* FridayActivity */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000730 /* FridayActivityBundle.swift */,
+				AA0000000000000000000731 /* Info.plist */,
+			);
+			path = FridayActivity;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -455,6 +455,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = R9BD597ST6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = FRIDAY;
@@ -462,9 +463,9 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "Reserved for future visual input features.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FRIDAY uses your location for local weather.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FRIDAY listens for your voice commands.";
-				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "FRIDAY creates reminders when you ask.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "FRIDAY transcribes your speech on-device.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -492,6 +493,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = R9BD597ST6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = FRIDAY;
@@ -499,9 +501,9 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "Reserved for future visual input features.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FRIDAY uses your location for local weather.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FRIDAY listens for your voice commands.";
-				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "FRIDAY creates reminders when you ask.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "FRIDAY transcribes your speech on-device.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -526,6 +528,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = R9BD597ST6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FridayActivity/Info.plist;
@@ -550,6 +553,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = R9BD597ST6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FridayActivity/Info.plist;
