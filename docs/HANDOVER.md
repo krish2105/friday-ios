@@ -1,7 +1,7 @@
 # FRIDAY iOS — Handover
 
 **Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-45, D-53–D-57, §10)
-**Repo state:** `main` @ `9c7d252` · **Commits:** 46
+**Repo state:** `main`, stage 3 landed at `15bca6f` · **Commits:** 47
 
 This replaces the previous handover, which was written by a cloud session with no Swift
 toolchain. Everything it warned about has now been compiled, run on a physical iPhone 16 Pro,
