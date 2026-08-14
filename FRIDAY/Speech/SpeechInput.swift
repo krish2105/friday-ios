@@ -39,12 +39,19 @@ enum SpeechInputError: LocalizedError {
 /// analyser and the input level — because two taps on the same input node
 /// conflict, so there can only be one audio owner.
 ///
-/// Note on `SpeechDetector`: it is absent, but the original reason has expired.
-/// D-09 recorded that it did not conform to `SpeechModule`, an Apple bug. The
-/// shipping iOS 26 SDK now declares `final public class SpeechDetector :
-/// Speech.SpeechModule`, so it *would* compile today. It stays out because the
-/// `AVAudioEngine` RMS level below works and push-to-talk governs the turn
-/// regardless — adding it is a live decision, not a blocked one.
+/// `SpeechDetector` is now present, and D-09 is closed. It was kept out because
+/// it did not conform to `SpeechModule` — an Apple bug with a stated expiry —
+/// and the shipping iOS 26 SDK declares `final public class SpeechDetector :
+/// Speech.SpeechModule`, verified against the real `iPhoneOS26.5.sdk` rather
+/// than the Mac Catalyst interface the first check used. Krishna chose to adopt
+/// it on 2026-08-15.
+///
+/// **It is behind `autoStop`, and "off" is a true revert rather than a variant.**
+/// With the toggle off the analyser is built with `[transcriber]` exactly as it
+/// was before, so the escape hatch restores byte-for-byte the path that Sessions
+/// 2–7 verified. This is the most crash-prone file in the project — both runtime
+/// traps came from here — and a new module in the capture graph deserves a way
+/// back that is not "hope the new code is correct".
 @MainActor
 @Observable
 final class SpeechInput {
@@ -53,7 +60,38 @@ final class SpeechInput {
     /// 0…1 input level, mapped from dBFS with a −50 dB floor.
     private(set) var level: Float = 0
 
+    /// Whether FRIDAY stops listening when he stops talking.
+    var autoStop: Bool {
+        didSet { UserDefaults.standard.set(autoStop, forKey: "friday.autoStop") }
+    }
+
+    /// Called on the main actor when speech has stopped for `silenceWindow`.
+    ///
+    /// Release-to-send still works and still wins — `stopListening` guards on
+    /// `state == .listening`, so whichever arrives second is a no-op. A detector
+    /// that never fires therefore degrades to exactly the old behaviour.
+    var onSilence: (() -> Void)?
+
+    /// How long a silence must last before the turn is treated as over.
+    ///
+    /// 1.5s rather than something snappier because it has to survive a pause for
+    /// breath mid-sentence. Cutting a man off while he is still thinking is a
+    /// worse failure than waiting half a second too long.
+    private static let silenceWindow: Duration = .milliseconds(1500)
+
     private let audioEngine = AVAudioEngine()
+
+    /// Rebuilt per turn alongside the transcriber — assumed single-use for the
+    /// same reason, since nothing says otherwise and reusing the transcriber
+    /// trapped inside the framework.
+    private var detector: SpeechDetector?
+    private var detectorTask: Task<Void, Never>?
+    private var silenceTask: Task<Void, Never>?
+    private var lastSpeechAt: ContinuousClock.Instant?
+
+    init() {
+        autoStop = UserDefaults.standard.object(forKey: "friday.autoStop") as? Bool ?? true
+    }
 
     /// Resolved once by `prepareAssets()` and reused. The *locale* is what is
     /// durable here — the transcriber built from it is not (see `start()`).
@@ -212,7 +250,18 @@ final class SpeechInput {
         let transcriber = Self.makeTranscriber(locale: locale)
         self.transcriber = transcriber
 
-        let analyzer = SpeechAnalyzer(modules: [transcriber])
+        // With `autoStop` off this is `[transcriber]` and everything downstream
+        // is identical to the verified path. Nothing about the detector leaks
+        // into the off case.
+        let detector = autoStop
+            ? SpeechDetector(detectionOptions: .init(sensitivityLevel: .medium),
+                             reportResults: true)
+            : nil
+        self.detector = detector
+
+        let modules: [any SpeechModule] = detector.map { [transcriber, $0] } ?? [transcriber]
+
+        let analyzer = SpeechAnalyzer(modules: modules)
         self.analyzer = analyzer
 
         let (inputSequence, inputBuilder) = AsyncStream<AnalyzerInput>.makeStream()
@@ -228,7 +277,10 @@ final class SpeechInput {
         // The analyser dictates its own format. The iPhone mic runs at 48 kHz,
         // so conversion is mandatory: feeding raw hardware buffers is the
         // failure that produces silence rather than an error.
-        let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [transcriber])
+        // Every module, not just the transcriber — a format the detector cannot
+        // accept would fail at `analyzer.start`, after capture is already
+        // running.
+        let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: modules)
 
         let (partials, partialsBuilder) = AsyncStream<String>.makeStream()
 
@@ -257,15 +309,65 @@ final class SpeechInput {
             return finalized + volatileText
         }
 
+        if let detector { watchForSilence(detector) }
+
         try startCapture(converting: analyzerFormat, into: inputBuilder)
         try await analyzer.start(inputSequence: inputSequence)
 
         return partials
     }
 
+    // MARK: - Auto-stop
+
+    /// Ends the turn once speech has started and then stopped.
+    ///
+    /// Two tasks rather than one, because the detector's results are ranges
+    /// arriving at a cadence this code does not control. Timing a silence off
+    /// that cadence would make the threshold depend on how often the framework
+    /// happens to report — so the detector only ever records *when speech last
+    /// happened*, and a separate clock decides when enough time has passed.
+    ///
+    /// `lastSpeechAt` starting nil is deliberate: until he has actually said
+    /// something there is no silence to measure, so holding the button in a
+    /// quiet room never fires.
+    private func watchForSilence(_ detector: SpeechDetector) {
+        lastSpeechAt = nil
+
+        detectorTask = Task { [weak self] in
+            do {
+                for try await result in detector.results where result.speechDetected {
+                    self?.lastSpeechAt = .now
+                }
+            } catch {
+                // The analyser ended, which `stop()` is already handling.
+            }
+        }
+
+        silenceTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(200))
+                guard let self, self.isCapturing else { return }
+                guard let last = self.lastSpeechAt else { continue }
+
+                if .now - last > Self.silenceWindow {
+                    self.onSilence?()
+                    return
+                }
+            }
+        }
+    }
+
     /// Stop capture, flush the analyser, and return the settled transcript.
     func stop() async -> String {
         guard isCapturing else { return "" }
+
+        // Cancelled before the analyser is finalised, so a late detector result
+        // cannot call `onSilence` into a turn that is already ending.
+        detectorTask?.cancel()
+        silenceTask?.cancel()
+        detectorTask = nil
+        silenceTask = nil
+        lastSpeechAt = nil
 
         audioEngine.inputNode.removeTap(onBus: 0)
         audioEngine.stop()
@@ -288,8 +390,12 @@ final class SpeechInput {
 
         resultsTask = nil
         analyzer = nil
-        // Discarded deliberately: it is finished and must never be reused.
+        // Both discarded deliberately: finished, and never to be reused. The
+        // detector is assumed single-use for the same reason as the transcriber
+        // — nothing says it is not, and reusing the transcriber trapped inside
+        // the framework on the second turn.
         transcriber = nil
+        detector = nil
         return final
     }
 

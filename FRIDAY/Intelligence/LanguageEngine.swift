@@ -53,6 +53,41 @@ final class LanguageEngine {
     private(set) var partialSpoken = ""
     private(set) var isResponding = false
 
+    // MARK: - Context budget
+    //
+    // D-18's overflow path has never been observed running, and open issue 5
+    // says it must not be described as working. The reason it stayed unverified
+    // is that nobody could see how close a conversation was to the limit — so
+    // the only way to exercise it was to type until something happened.
+    //
+    // `tokenCount(for:)` and `contextSize` make the budget observable. This is
+    // measurement, not a feature: it turns "probably unreachable" into a number
+    // you can watch approach 4,096.
+
+    /// Tokens the live session is carrying, or `nil` before the first turn.
+    private(set) var contextUsed: Int?
+
+    /// The window this model actually has, asked rather than assumed to be the
+    /// ~4,096 every comment in this project quotes.
+    ///
+    /// Both of these live on `SystemLanguageModel`, **not** on
+    /// `LanguageModelSession` — which reads backwards, since a context window is
+    /// a property of a conversation rather than of a model. Checked, because
+    /// putting them on the session was the natural guess and does not compile.
+    /// `nil` below iOS 26.4, where neither API exists — the deployment target is
+    /// 26.0 and these arrived in a point release, so the meter is a bonus on new
+    /// enough phones rather than something to raise the floor for.
+    var contextSize: Int? {
+        guard #available(iOS 26.4, *) else { return nil }
+        return model.contextSize
+    }
+
+    /// Re-measures the session's transcript. Cheap, and only after a turn.
+    private func measureContext() async {
+        guard #available(iOS 26.4, *) else { return }
+        contextUsed = try? await model.tokenCount(for: Array(session.transcript))
+    }
+
     private var session: LanguageModelSession
     private let model = SystemLanguageModel.default
 
@@ -247,6 +282,7 @@ final class LanguageEngine {
 
             let reply = FridayReply(spoken: spoken, tone: tone ?? "calm")
             lastExchange = (boss: input, friday: spoken)
+            await measureContext()
             return reply
 
         } catch let error as LanguageModelSession.GenerationError {

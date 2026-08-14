@@ -89,6 +89,13 @@ final class FridayEngine {
         self.reminders = reminders
         self.language = LanguageEngine(reminders: reminders)
 
+        // Auto-stop (D-09). The detector ends the turn when he stops talking;
+        // releasing the button still ends it too, and `stopListening` guards on
+        // `.listening` so whichever is second does nothing.
+        speech.onSilence = { [weak self] in
+            Task { await self?.stopListening() }
+        }
+
         audioSession.onInterruption = { [weak self] interruption in
             guard case .began = interruption else { return }
             // A phone call is not an app error — stop cleanly, keep whatever

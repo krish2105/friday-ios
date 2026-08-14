@@ -4,17 +4,21 @@ import SwiftUI
 struct SettingsView: View {
     @Bindable var output: SpeechOutput
     @Bindable var notifier: FridayNotifier
+    @Bindable var speech: SpeechInput
     var translator: Translator
+    var language: LanguageEngine
 
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             Form {
+                listeningSection
                 voiceSection
                 deliverySection
                 nudgeSection
                 hindiSection
+                contextSection
             }
             .task { await translator.refreshAvailability() }
             .navigationTitle("Settings")
@@ -26,6 +30,25 @@ struct SettingsView: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    // MARK: - Listening
+
+    private var listeningSection: some View {
+        Section {
+            Toggle("Stop when I stop talking", isOn: $speech.autoStop)
+        } header: {
+            Text("Listening")
+        } footer: {
+            if speech.autoStop {
+                Text("FRIDAY ends the turn after about a second and a half of silence. Holding the orb still works, and letting go still ends the turn immediately.")
+            } else {
+                // Not a lesser mode — the analyser is built exactly as it was
+                // before the detector existed, so this is the path Sessions 2–7
+                // verified rather than a variant of it.
+                Text("Hold the orb to talk, let go to send. Nothing listens for pauses.")
+            }
+        }
     }
 
     // MARK: - Voice
@@ -146,6 +169,37 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Context
+    //
+    // Not a feature — an instrument. D-18's overflow recovery has never been
+    // observed running, and open issue 5 says it must not be called working. The
+    // reason it stayed unverified is that nobody could see how close a
+    // conversation was to the limit, so the only way to reach it was to type
+    // until something happened. This makes the budget a number you can watch.
+
+    @ViewBuilder
+    private var contextSection: some View {
+        // Hidden entirely below iOS 26.4 rather than shown empty — a meter with
+        // no reading is worse than no meter.
+        if let size = language.contextSize {
+            Section {
+                LabeledContent("Conversation") {
+                    if let used = language.contextUsed {
+                        Text("\(used.formatted()) / \(size.formatted()) tokens")
+                            .monospacedDigit()
+                            .foregroundStyle(used > size * 3 / 4 ? .orange : .secondary)
+                    } else {
+                        Text("nothing yet").foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Context")
+            } footer: {
+                Text("How much of the model's window this conversation is using. When it fills, FRIDAY starts a fresh session and carries the last exchange across.")
+            }
+        }
+    }
+
     private var rateLabel: String {
         let normalized = output.rate / AVSpeechUtteranceDefaultSpeechRate
         return String(format: "%.2f×", normalized)
@@ -153,5 +207,9 @@ struct SettingsView: View {
 }
 
 #Preview {
-    SettingsView(output: SpeechOutput(), notifier: FridayNotifier(), translator: Translator())
+    SettingsView(output: SpeechOutput(),
+                 notifier: FridayNotifier(),
+                 speech: SpeechInput(),
+                 translator: Translator(),
+                 language: LanguageEngine(reminders: ReminderService(notifier: FridayNotifier())))
 }

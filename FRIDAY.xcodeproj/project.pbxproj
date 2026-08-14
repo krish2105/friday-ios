@@ -56,6 +56,7 @@
 		AA000000000000000000085C /* LiveScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000075C /* LiveScanner.swift */; };
 		AA000000000000000000085D /* PDFReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000075D /* PDFReader.swift */; };
 		AA000000000000000000085E /* Deadline.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000075E /* Deadline.swift */; };
+		AA000000000000000000085F /* FridaySnippet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000075F /* FridaySnippet.swift */; };
 		AA0000000000000000000840 /* Intent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000740 /* Intent.swift */; };
 		AA0000000000000000000830 /* FridayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071F /* FridayAttributes.swift */; };
 		AA0000000000000000000831 /* FridayLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000721 /* FridayLiveActivity.swift */; };
@@ -110,6 +111,7 @@
 		AA000000000000000000075C /* LiveScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveScanner.swift; sourceTree = "<group>"; };
 		AA000000000000000000075D /* PDFReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFReader.swift; sourceTree = "<group>"; };
 		AA000000000000000000075E /* Deadline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Deadline.swift; sourceTree = "<group>"; };
+		AA000000000000000000075F /* FridaySnippet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridaySnippet.swift; sourceTree = "<group>"; };
 		AA0000000000000000000740 /* Intent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intent.swift; sourceTree = "<group>"; };
 		AA0000000000000000000702 /* FridayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayState.swift; sourceTree = "<group>"; };
 		AA0000000000000000000703 /* FridayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayEngine.swift; sourceTree = "<group>"; };
@@ -301,6 +303,7 @@
 			children = (
 				AA0000000000000000000741 /* AskFridayIntent.swift */,
 				AA0000000000000000000742 /* StartListeningIntent.swift */,
+				AA000000000000000000075F /* FridaySnippet.swift */,
 			);
 			path = Intents;
 			sourceTree = "<group>";
@@ -443,6 +446,7 @@
 				AA000000000000000000085C /* LiveScanner.swift in Sources */,
 				AA000000000000000000085D /* PDFReader.swift in Sources */,
 				AA000000000000000000085E /* Deadline.swift in Sources */,
+				AA000000000000000000085F /* FridaySnippet.swift in Sources */,
 				AA0000000000000000000841 /* AskFridayIntent.swift in Sources */,
 				AA0000000000000000000842 /* StartListeningIntent.swift in Sources */,
 				AA0000000000000000000803 /* FridayEngine.swift in Sources */,

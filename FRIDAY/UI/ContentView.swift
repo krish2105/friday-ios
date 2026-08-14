@@ -143,7 +143,11 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView(output: engine.voice, notifier: engine.notifier, translator: engine.translator)
+            SettingsView(output: engine.voice,
+                         notifier: engine.notifier,
+                         speech: engine.speech,
+                         translator: engine.translator,
+                         language: engine.language)
         }
         // Out-of-process picking, so this needs no photo library permission and
         // no usage string — the app only ever receives the one image he chose.

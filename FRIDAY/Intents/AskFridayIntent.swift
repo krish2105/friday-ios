@@ -1,5 +1,6 @@
 import AppIntents
 import Foundation
+import SwiftUI
 
 /// Answers a question with no speech, no audio session and no UI.
 ///
@@ -70,9 +71,15 @@ struct AskFridayIntent: AppIntent {
     var question: String
 
     @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog {
+    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetIntent {
         let answer = await FridayAnswer.text(for: question)
-        return .result(dialog: IntentDialog(stringLiteral: answer))
+        // Spoken *and* shown. The dialog is what Siri says; the snippet is what
+        // Siri and Spotlight draw, and without it the answer is a grey bubble
+        // indistinguishable from any other app's.
+        return .result(
+            dialog: IntentDialog(stringLiteral: answer),
+            snippetIntent: FridayAnswerSnippet(answer: answer)
+        )
     }
 }
 

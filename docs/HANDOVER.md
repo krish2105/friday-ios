@@ -1,6 +1,6 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-45, D-53–D-61, §10)
+**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-09, D-45, D-53–D-62, §10)
 **Repo state:** `main`, stage 3 landed at `15bca6f` · **Commits:** 47
 
 This replaces the previous handover, which was written by a cloud session with no Swift
@@ -92,7 +92,7 @@ session was diagnosed this way in about a minute.
 
 ## 3. What is built
 
-50 Swift files across two targets.
+51 Swift files across two targets.
 
 | Dir | Files | Contents |
 |---|---|---|
@@ -103,7 +103,7 @@ session was diagnosed this way in about a minute.
 | `Tools/` | 8 | `FridayTool`, `TimeTool`, `DeviceTool`, `WeatherTool`, `CalendarTool`, `ReminderTool`, `ContactTool`, `MotionTool` |
 | `UI/` | 9 | `ContentView`, `ConversationView`, `OrbView`, `TalkButton`, `SettingsView`, `AmbientBackground`, `GlassSurface`, `FridayTheme`, `Haptics` |
 | `LiveActivity/` | 3 | `FridayAttributes`, `LiveActivityController`, `FridayLiveActivity` |
-| `Intents/` | 2 | `AskFridayIntent` (+ `FridayAnswer`, `FridayShortcuts`), `StartListeningIntent` |
+| `Intents/` | 3 | `AskFridayIntent` (+ `FridayAnswer`, `FridayShortcuts`), `StartListeningIntent`, `FridaySnippet` |
 | `Vision/` | 7 | `TextScanner`, `DocumentCamera`, `ReceiptReader`, `BoardingPassReader`, `BarcodeReader`, `LiveScanner`, `PDFReader` |
 | `Language/` | 3 | `Bilingual`, `Translator`, `Tongues` |
 | `Notify/` | 1 | `FridayNotifier` |
@@ -633,6 +633,41 @@ The old §8 still stands except where noted. New decisions from device work:
   cap is. `LanguageEngine.bounded` remains its own private copy, deliberately unrefactored
   mid-bugfix.
 
+- **D-62 · Stage 7 — auto-stop, a context meter, and a Siri card.**
+
+  **`SpeechDetector` is in, and its off-switch is a true revert.** With `autoStop` off the
+  analyser is built with `[transcriber]` — byte-for-byte the graph Sessions 2–7 verified,
+  not a variant of it. This is the most crash-prone file in the project, both runtime traps
+  came from it, and a new module in the capture graph deserves a way back that is not "hope
+  the new code is right". Release-to-send still works and still wins, since `stopListening`
+  guards on `.listening` and whichever fires second is a no-op — so a detector that never
+  reports degrades to exactly the old behaviour rather than to a broken one.
+
+  Two tasks, not one. The detector's results arrive as ranges at a cadence this code does not
+  control, so timing a silence off that cadence would make the threshold depend on how often
+  the framework happens to report. The detector therefore only records **when speech last
+  happened**, and a separate 200 ms clock decides when 1.5 s has passed. `lastSpeechAt`
+  starting nil is deliberate: until he has said something there is no silence to measure, so
+  holding the orb in a quiet room never fires.
+
+  **The context meter is an instrument, not a feature — and it exists to retire open issue 5.**
+  D-18's overflow recovery has never been observed running, and the reason it stayed
+  unverified is that nobody could see how close a conversation was to the limit. Now it is a
+  number. `tokenCount(for:)` and `contextSize` live on **`SystemLanguageModel`, not
+  `LanguageModelSession`** — which reads backwards, since a context window is a property of a
+  conversation, and putting them on the session was the natural guess that does not compile.
+  Both are **iOS 26.4+** against a 26.0 deployment target, so they are `#available`-guarded
+  and the section hides itself rather than showing an empty meter.
+
+  **Interactive snippets** turn Siri's grey bubble into a FRIDAY-coloured card. It is a
+  separate `SnippetIntent` rather than an inline view because that is how iOS 26 models it —
+  the system re-runs the snippet intent to refresh the card, so everything drawn has to be
+  reproducible from its parameters. `.result(view:)` lives in the `_AppIntents_SwiftUI`
+  overlay, so the file needs `import SwiftUI` alongside `import AppIntents`. The card is
+  deliberately plain and `lineLimit(8)`: it is laid out by another process, the ambient field
+  and `.glassEffect` both assume a full screen behind them, and D-61 applies to any view
+  rendering text this app did not choose the length of.
+
 ### D-18 is now probably unreachable — do not delete it, do not trust it
 
 `LanguageEngine` still carries the full context-overflow path: catch
@@ -655,7 +690,7 @@ If you need to exercise it, the practical route is to temporarily re-register th
 `makeSession()`, which restores the old budget pressure, rather than typing until it
 happens.
 
-### D-09 needs re-deciding
+### D-09 is CLOSED — SpeechDetector adopted
 
 **`SpeechDetector` now conforms to `SpeechModule`** in the shipping SDK:
 
