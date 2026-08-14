@@ -124,13 +124,17 @@ session was diagnosed this way in about a minute.
 
 **Phases A, B and C are complete.** What remains:
 
-### Still untested on device
+### Every criterion passes on device
 
-1. **Apple Intelligence toggled off** — deliberately last: turning it off can purge
-   the models and force a multi-GB re-download that blocks everything else.
+Sessions 1–7 are fully verified, including barge-in, airplane mode, a phone call
+mid-listen, ten turns, the Dynamic Island, idle CPU at 2%, denied microphone and calendar
+permissions, and Apple Intelligence toggled off.
 
-Everything else in Sessions 1–6 passes on device, including barge-in, airplane mode, a
-phone call mid-listen, ten turns, the Dynamic Island, and idle CPU.
+The toggle test is worth recording in detail, because it demonstrates the routing rewrite
+(§5) more clearly than anything else: with Apple Intelligence **off**, the red
+"Apple Intelligence Off" card appears via D-07's `scenePhase` re-check — and **"what time
+is it" still answers correctly**, because time routes through Swift and never reaches the
+model. Only conversational turns degrade. Half the app keeps working with the model gone.
 
 ### Phase C is complete
 
@@ -357,8 +361,7 @@ call, not the next session's.
 4. **Free-account provisioning expires every 7 days.** The app stops launching until rebuilt.
 5. **D-18's overflow path is unverified** and probably unreachable in normal use — see the
    section above. Written, correct on inspection, never observed running.
-6. **Apple Intelligence toggled off is still untested.** Left until last because turning it
-   off can purge the models and force a multi-GB re-download.
+6. **`WeatherTool`, D-09 and the paid account** remain the three standing decisions.
 
 ---
 
