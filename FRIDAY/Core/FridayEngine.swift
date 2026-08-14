@@ -214,7 +214,7 @@ final class FridayEngine {
                 guard await gate.claim() else { return }
                 // The abandoned task still holds `isResponding` and still owns
                 // the session, so without this the NEXT turn fails too.
-                await language.abandonInFlight()
+                language.abandonInFlight()
                 continuation.resume(returning: .failure(LanguageEngineFailure.timedOut))
             }
         }
