@@ -44,6 +44,8 @@ enum Intent: Equatable {
     case scan(source: ScanSource, purpose: ScanPurpose = .read)
     /// "What's that sound." Listens for a few seconds and names it.
     case listen
+    /// "Am I walking or driving." What the motion coprocessor thinks right now.
+    case activity
     /// Nothing to look up — hand it to the model.
     case chat
 }
@@ -167,6 +169,16 @@ enum Router {
 
         if let contact = contactRequest(in: text, original: input) {
             return contact
+        }
+
+        // Before `motionRequest`, which owns "walking" for step counts: "how far
+        // have I walked" is a distance and "am I walking" is a state. The
+        // question word is the whole difference, so this asks for it explicitly
+        // rather than relying on ordering alone.
+        if contains(text, ["am i walking", "am i driving", "am i running",
+                           "am i cycling", "am i moving", "am i still",
+                           "what am i doing", "am i in a car", "am i on foot"]) {
+            return .activity
         }
 
         if let motion = motionRequest(in: text) {
@@ -733,6 +745,12 @@ enum Lookup {
 
             case .motion(let aspect, let dayOffset):
                 return await MotionTool.answer(aspect: aspect, dayOffset: dayOffset)
+
+            case .activity:
+                // Safe from Siri, unlike `.listen` and `.scan`: this reads a log
+                // the coprocessor already keeps and touches neither the
+                // microphone nor the screen.
+                return ActivityTool.sentence(for: await ActivityTool.current())
 
             case .reckon(let sum):
                 // Computed, never recalled. D-44 at its cleanest: a model asked

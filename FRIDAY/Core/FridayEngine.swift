@@ -723,6 +723,19 @@ final class FridayEngine {
             return "Point me at it, boss."
         }
 
+        // The one place this app changes behaviour rather than answering a
+        // question. Holding a phone up to read a menu while driving is the
+        // single worst thing anything here could invite, and a viewfinder is an
+        // invitation. The library and Files are left alone — those need no
+        // camera and no aiming.
+        //
+        // Fail-safe by construction: `isDriving` is bounded at two seconds and
+        // answers false on any delay, refusal or unavailability, so the camera
+        // behaves exactly as it did before for everyone else.
+        if source == .camera || source == .live, await ActivityTool.isDriving() {
+            return "You're driving, boss. I'll read it when you've stopped."
+        }
+
         // Live and document capture both need the camera, and both fall back to
         // the photo library rather than presenting a black rectangle.
         if source == .live, LiveScanner.isAvailable {

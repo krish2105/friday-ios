@@ -88,6 +88,7 @@
 		AA0000000000000000000918 /* DocumentStructure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000916 /* DocumentStructure.swift */; };
 		AA0000000000000000000920 /* SoundListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000919 /* SoundListener.swift */; };
 		AA0000000000000000000922 /* SceneReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000921 /* SceneReader.swift */; };
+		AA0000000000000000000924 /* ActivityTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000923 /* ActivityTool.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -201,6 +202,7 @@
 		AA0000000000000000000916 /* DocumentStructure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentStructure.swift; sourceTree = "<group>"; };
 		AA0000000000000000000919 /* SoundListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundListener.swift; sourceTree = "<group>"; };
 		AA0000000000000000000921 /* SceneReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneReader.swift; sourceTree = "<group>"; };
+		AA0000000000000000000923 /* ActivityTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityTool.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -334,6 +336,7 @@
 				AA000000000000000000071C /* ReminderTool.swift */,
 				AA0000000000000000000756 /* ContactTool.swift */,
 				AA0000000000000000000758 /* MotionTool.swift */,
+				AA0000000000000000000923 /* ActivityTool.swift */,
 				AA0000000000000000000765 /* ReckonTool.swift */,
 				AA0000000000000000000766 /* TimerTool.swift */,
 			);
@@ -573,6 +576,7 @@
 				AA0000000000000000000856 /* ContactTool.swift in Sources */,
 				AA0000000000000000000857 /* EventService.swift in Sources */,
 				AA0000000000000000000858 /* MotionTool.swift in Sources */,
+				AA0000000000000000000924 /* ActivityTool.swift in Sources */,
 				AA0000000000000000000859 /* Tongues.swift in Sources */,
 				AA000000000000000000085A /* BoardingPassReader.swift in Sources */,
 				AA000000000000000000085B /* BarcodeReader.swift in Sources */,
@@ -738,7 +742,7 @@
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "FRIDAY reads your calendar to brief you on your day.";
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "FRIDAY adds events to your calendar when you confirm them.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "FRIDAY looks up numbers and birthdays when you ask. Contacts are read on-device and never leave your phone.";
-				INFOPLIST_KEY_NSMotionUsageDescription = "FRIDAY reads your step count when you ask how far you have walked.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "FRIDAY reads your step count when you ask how far you have walked, and whether you are walking or driving so she does not put a camera up at the wheel.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "FRIDAY reads documents you point the camera at. Recognition happens on-device.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FRIDAY uses your location for local weather.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FRIDAY listens for your voice commands, and for sounds around you when you ask what one is. Audio is analysed on-device and never leaves your phone.";
@@ -779,7 +783,7 @@
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "FRIDAY reads your calendar to brief you on your day.";
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "FRIDAY adds events to your calendar when you confirm them.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "FRIDAY looks up numbers and birthdays when you ask. Contacts are read on-device and never leave your phone.";
-				INFOPLIST_KEY_NSMotionUsageDescription = "FRIDAY reads your step count when you ask how far you have walked.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "FRIDAY reads your step count when you ask how far you have walked, and whether you are walking or driving so she does not put a camera up at the wheel.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "FRIDAY reads documents you point the camera at. Recognition happens on-device.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FRIDAY uses your location for local weather.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FRIDAY listens for your voice commands, and for sounds around you when you ask what one is. Audio is analysed on-device and never leaves your phone.";
