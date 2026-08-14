@@ -8,6 +8,11 @@ enum LanguageEngineFailure: Error, Equatable, Sendable {
     case guardrail
     case contextOverflow
     case modelUnavailable
+    /// The turn never came back. A tool with no timeout can wedge the model
+    /// indefinitely, and a wedged turn leaves the engine in `.thinking`, where
+    /// the talk button's `state == .idle` guard makes the app unusable until
+    /// it is relaunched. This is the backstop for that.
+    case timedOut
     case other(String)
 
     /// What FRIDAY says when this happens. Always in character.
@@ -19,6 +24,8 @@ enum LanguageEngineFailure: Error, Equatable, Sendable {
             "Losing the thread a bit, boss. Starting fresh."
         case .modelUnavailable:
             "I'm not all here right now, boss — Apple Intelligence isn't available."
+        case .timedOut:
+            "That one's taking too long, boss. Give it another go."
         case .other:
             "Something went sideways, boss. Say the word and I'll try again."
         }

@@ -149,7 +149,36 @@ final class FridayEngine {
         state = .thinking
 
         do {
-            let reply = try await language.respond(to: trimmed)
+            // A turn must always end. Nothing in the tool layer has a timeout,
+            // so a tool that never returns — a location fix that never
+            // arrives, a network path that never reports — wedges the model,
+            // which strands the engine in `.thinking`. The talk button only
+            // acts when `state == .idle`, so that state is unrecoverable: the
+            // app is dead until it is relaunched.
+            //
+            // Racing the turn against a deadline fixes every cause at once
+            // rather than the two that can be named, and losing the race lands
+            // in the same in-character failure path as any other error.
+            let reply = try await withThrowingTaskGroup(of: FridayReply.self) { group in
+                // Captured rather than written `@MainActor in`, which trips the
+                // region-based isolation checker ("pattern that the
+                // region-based isolation checker does not understand how to
+                // check"). `LanguageEngine` is a @MainActor class and so
+                // implicitly Sendable, and `respond` is main-actor isolated, so
+                // the await hops on its own.
+                group.addTask { [language] in
+                    try await language.respond(to: trimmed)
+                }
+                group.addTask {
+                    try await Task.sleep(for: .seconds(30))
+                    throw LanguageEngineFailure.timedOut
+                }
+                defer { group.cancelAll() }
+                guard let first = try await group.next() else {
+                    throw LanguageEngineFailure.timedOut
+                }
+                return first
+            }
             conversation[replyIndex].text = reply.spoken
             conversation[replyIndex].tone = reply.tone
         } catch let failure as LanguageEngineFailure {
