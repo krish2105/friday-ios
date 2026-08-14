@@ -41,6 +41,7 @@
 		AA0000000000000000000845 /* FridayLockWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000744 /* FridayLockWidget.swift */; };
 		AA0000000000000000000844 /* FridayListenControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000743 /* FridayListenControl.swift */; };
 		AA0000000000000000000841 /* AskFridayIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000741 /* AskFridayIntent.swift */; };
+		AA0000000000000000000850 /* TextScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000750 /* TextScanner.swift */; };
 		AA0000000000000000000840 /* Intent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000740 /* Intent.swift */; };
 		AA0000000000000000000830 /* FridayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071F /* FridayAttributes.swift */; };
 		AA0000000000000000000831 /* FridayLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000721 /* FridayLiveActivity.swift */; };
@@ -80,6 +81,7 @@
 		AA0000000000000000000744 /* FridayLockWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayLockWidget.swift; sourceTree = "<group>"; };
 		AA0000000000000000000743 /* FridayListenControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayListenControl.swift; sourceTree = "<group>"; };
 		AA0000000000000000000741 /* AskFridayIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskFridayIntent.swift; sourceTree = "<group>"; };
+		AA0000000000000000000750 /* TextScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextScanner.swift; sourceTree = "<group>"; };
 		AA0000000000000000000740 /* Intent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intent.swift; sourceTree = "<group>"; };
 		AA0000000000000000000702 /* FridayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayState.swift; sourceTree = "<group>"; };
 		AA0000000000000000000703 /* FridayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayEngine.swift; sourceTree = "<group>"; };
@@ -151,6 +153,7 @@
 				AA0000000000000000000407 /* Tools */,
 				AA0000000000000000000408 /* LiveActivity */,
 				AA0000000000000000000409 /* Intents */,
+				AA0000000000000000000411 /* Vision */,
 				AA0000000000000000000404 /* UI */,
 				AA0000000000000000000709 /* Assets.xcassets */,
 			);
@@ -225,6 +228,14 @@
 				AA000000000000000000071C /* ReminderTool.swift */,
 			);
 			path = Tools;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000411 /* Vision */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000750 /* TextScanner.swift */,
+			);
+			path = Vision;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000000409 /* Intents */ = {
@@ -359,6 +370,7 @@
 				AA0000000000000000000801 /* FRIDAYApp.swift in Sources */,
 				AA0000000000000000000802 /* FridayState.swift in Sources */,
 				AA0000000000000000000840 /* Intent.swift in Sources */,
+				AA0000000000000000000850 /* TextScanner.swift in Sources */,
 				AA0000000000000000000841 /* AskFridayIntent.swift in Sources */,
 				AA0000000000000000000842 /* StartListeningIntent.swift in Sources */,
 				AA0000000000000000000803 /* FridayEngine.swift in Sources */,
