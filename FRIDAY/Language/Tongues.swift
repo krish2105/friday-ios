@@ -83,6 +83,21 @@ enum Tongues {
         return nil
     }
 
+    /// Every code this list knows, deduplicated across aliases.
+    ///
+    /// The name table is many-to-one — "mandarin" and "chinese" are both `zh` —
+    /// so the codes have to be collapsed rather than counted.
+    private static let codes: Set<String> = Set(byName.values)
+
+    /// Whether Apple's translator handles a language, by code rather than name.
+    ///
+    /// `code(named:)` answers "did he name a language"; this answers "can I
+    /// translate what I'm looking at", which arrives as a detected code and never
+    /// as a spoken word.
+    static func isSupported(_ code: String) -> Bool {
+        codes.contains(code.lowercased())
+    }
+
     /// The English name for a code, for FRIDAY to say back.
     static func name(for code: String) -> String {
         Locale(identifier: "en_US").localizedString(forLanguageCode: code)?.capitalized

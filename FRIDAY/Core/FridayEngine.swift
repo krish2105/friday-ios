@@ -80,6 +80,14 @@ final class FridayEngine {
     /// and conversations here are ephemeral by decision.
     private(set) var lastScan: ScanFollowUp.Scanned?
 
+    /// What the picture now being chosen is *for*.
+    ///
+    /// Reset to `.read` after every scan rather than left set. A purpose that
+    /// outlived its turn would make the next plain "read this" silently
+    /// translate, and a mode nobody asked to be in is the failure this app has
+    /// already fixed once, in the live-translation stage.
+    private var pendingScanPurpose: ScanPurpose = .read
+
     /// Which photos the picker offers. Screenshots only when the offer raised
     /// it, so he is not hunting through a year of pictures for the one he took
     /// four seconds ago.
@@ -424,8 +432,13 @@ final class FridayEngine {
             return
         }
 
-        if case .scan(let source) = intent {
-            let answer = await voiced(await raiseScanner(source), factual: false)
+        if case .scan(let source, let purpose) = intent {
+            // Set before the picker goes up, because by the time a photo comes
+            // back the sentence that asked for it is long gone — the picker
+            // hands back `[Data]` and nothing else. This is the whole reason the
+            // purpose rides on the intent rather than being re-derived later.
+            pendingScanPurpose = purpose
+            let answer = await voiced(await raiseScanner(source, purpose: purpose), factual: false)
             conversation[replyIndex].text = answer
             conversation[replyIndex].tone = "calm"
             await deliver(answer)
@@ -684,7 +697,17 @@ final class FridayEngine {
     /// The camera falls back to the photo library rather than failing when the
     /// scanner is unsupported — the Simulator, mostly, where a black screen and
     /// no explanation would be the worst of both.
-    private func raiseScanner(_ source: ScanSource) async -> String {
+    private func raiseScanner(_ source: ScanSource, purpose: ScanPurpose = .read) async -> String {
+        // Naming the language up front is not decoration: it is the only chance
+        // he gets to notice FRIDAY heard the wrong one *before* spending a
+        // camera, an OCR pass and a translation on it.
+        let holdSteady: String
+        if case .translate(let code) = purpose {
+            holdSteady = "Hold it steady, boss — I'll put it into \(Tongues.name(for: code))."
+        } else {
+            holdSteady = "Hold it steady, boss."
+        }
+
         if source == .files {
             showFilePicker = true
             return "Point me at it, boss."
@@ -713,7 +736,7 @@ final class FridayEngine {
         }
 
         showCamera = true
-        return "Hold it steady, boss."
+        return holdSteady
     }
 
     /// A code's contents, said out loud and — if it is a link — staged.
@@ -851,6 +874,69 @@ final class FridayEngine {
         await present(scanned: text)
     }
 
+    /// A page read in one language and shown in another.
+    ///
+    /// **The translation goes on screen verbatim and is composed in Swift**, the
+    /// same rule the ordinary scan path follows: the model never sees this text
+    /// and cannot paraphrase it. That matters more here than anywhere else in the
+    /// app — the entire premise is that he *cannot read the original*, so there
+    /// is nothing to check a wrong answer against. A summary you can't verify is
+    /// the one kind of answer this project refuses to give.
+    ///
+    /// Both are kept on screen, original above translation. A menu you can point
+    /// at is worth more than a translation you can only read out.
+    private func present(translating text: String, into target: String) async {
+        switch SightTranslator.reading(of: text, into: target) {
+        case .translatable(let source, let destination):
+            let trimmed = SightTranslator.capped(text)
+            let wasCapped = trimmed.count < text.count
+
+            // Bounded like every other long path. A page of translation is a
+            // sequence of model calls inside the framework, and this was the one
+            // new path that could strand `.thinking` (HANDOVER §7).
+            let translated: String? = await withDeadline(seconds: 30) { [weak self] in
+                guard let self else { return nil }
+                return try? await self.translator.translate(trimmed, from: source, into: destination)
+            }
+
+            guard let translated else {
+                // A missing pack is by far the likeliest cause, and it is fixable
+                // — so the line says which language and where, rather than
+                // "something went wrong".
+                await say("I'd need \(Tongues.name(for: source)) downloaded first, boss. "
+                          + "Settings, Apps, Translate, Downloaded Languages.")
+                return
+            }
+
+            let line = await voiced(
+                SightTranslator.sentence(for: .translatable(from: source, to: destination),
+                                         wasCapped: wasCapped),
+                factual: true
+            )
+            conversation.append(ConversationTurn(speaker: .friday,
+                                                 text: Self.excerpt(of: translated),
+                                                 tone: "calm",
+                                                 kind: .quoted))
+            conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
+            Haptics.replyReceived()
+
+            // Spoken in the language it was translated *into*, not FRIDAY's.
+            // Reading Hindi text aloud in an English voice is noise, and the
+            // synthesiser has `Lekha` for exactly this.
+            await deliver(line)
+            await voice.speak(Self.excerpt(of: translated), in: destination)
+
+        case let other:
+            // Already in that language, unsupported, or unreadable — each names
+            // itself. The text still goes up, because he asked to see it.
+            conversation.append(ConversationTurn(speaker: .friday,
+                                                 text: Self.excerpt(of: text),
+                                                 tone: "calm",
+                                                 kind: .quoted))
+            await say(SightTranslator.sentence(for: other))
+        }
+    }
+
     /// Stages a calendar entry or a reminder from what was just read.
     ///
     /// Staged, never written — D-34 holds here exactly as it does for a spoken
@@ -889,6 +975,16 @@ final class FridayEngine {
     private func present(scanned text: String) async {
         // Remembered so the next turn can say "add that to my calendar".
         lastScan = ScanFollowUp.scanned(text)
+
+        // Taken and cleared in one move. Every path below returns, so a purpose
+        // left set here would leak into the next scan.
+        let purpose = pendingScanPurpose
+        pendingScanPurpose = .read
+
+        if case .translate(let target) = purpose {
+            await present(translating: text, into: target)
+            return
+        }
 
         // A receipt is worth more than a summary of a receipt, so it gets first
         // refusal. Three gates, and any of them declining costs nothing but the

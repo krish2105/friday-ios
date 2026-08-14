@@ -83,6 +83,7 @@
 		AA0000000000000000000831 /* FridayLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000721 /* FridayLiveActivity.swift */; };
 		AA0000000000000000000832 /* FridayActivityBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000730 /* FridayActivityBundle.swift */; };
 		AA0000000000000000000833 /* FridayActivity.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000301 /* FridayActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		AA000000000000000000915 /* SightTranslator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000914 /* SightTranslator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -192,6 +193,7 @@
 		AA0000000000000000000721 /* FridayLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayLiveActivity.swift; sourceTree = "<group>"; };
 		AA0000000000000000000730 /* FridayActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayActivityBundle.swift; sourceTree = "<group>"; };
 		AA0000000000000000000731 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA000000000000000000914 /* SightTranslator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SightTranslator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -357,6 +359,7 @@
 				AA0000000000000000000754 /* ReceiptReader.swift */,
 				AA000000000000000000075A /* BoardingPassReader.swift */,
 				AA0000000000000000000767 /* CardReader.swift */,
+				AA000000000000000000914 /* SightTranslator.swift */,
 				AA0000000000000000000784 /* ScanFollowUp.swift */,
 				AA000000000000000000075B /* BarcodeReader.swift */,
 				AA000000000000000000075C /* LiveScanner.swift */,
@@ -574,6 +577,7 @@
 				AA0000000000000000000865 /* ReckonTool.swift in Sources */,
 				AA0000000000000000000866 /* TimerTool.swift in Sources */,
 				AA0000000000000000000867 /* CardReader.swift in Sources */,
+				AA000000000000000000915 /* SightTranslator.swift in Sources */,
 				AA0000000000000000000880 /* TimerAttributes.swift in Sources */,
 				AA0000000000000000000882 /* TimerActivityController.swift in Sources */,
 				AA0000000000000000000884 /* FridayActions.swift in Sources */,

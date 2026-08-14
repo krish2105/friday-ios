@@ -41,9 +41,21 @@ enum Intent: Equatable {
     case stopTranslating
     /// Read whatever he's about to show me. Nothing to look up here — the image
     /// comes from the UI, so `FridayEngine.scan` does the work.
-    case scan(source: ScanSource)
+    case scan(source: ScanSource, purpose: ScanPurpose = .read)
     /// Nothing to look up — hand it to the model.
     case chat
+}
+
+/// What to do with the words once they're off the page.
+///
+/// Carried on the intent rather than inferred later, because by the time the
+/// photo comes back from the picker the sentence that asked for it is gone.
+enum ScanPurpose: Equatable {
+    /// The existing behaviour: read it, and offer a receipt or a boarding pass
+    /// if that is what it turns out to be.
+    case read
+    /// Put it into this language first. `code` is a language code.
+    case translate(code: String)
 }
 
 /// Where the picture comes from.
@@ -78,9 +90,28 @@ enum Router {
             return .stopTranslating
         }
 
-        // Before everything else, because a translation request can contain any
-        // words at all — "how do you say what time is it in French" would
-        // otherwise be answered with the time.
+        // Translating something he is *holding up*. The most specific of the
+        // three translation shapes, so it is asked first — and that order is
+        // measured rather than reasoned. Placed after `translationRequest` below,
+        // "translate this menu into Hindi" came back as a request to translate
+        // the literal words "this menu", because a sight noun reads perfectly
+        // well as a phrase. Placed after mode entry it would be swallowed whole,
+        // since "translate this menu" contains no phrase either — the same shape
+        // as the bug that lost "translate into Hindi where is the station", one
+        // rung further down.
+        //
+        // The gate is deliberately narrow: a demonstrative *and* a word for a
+        // thing you can point a camera at. "Translate this into Hindi" is left
+        // alone and still enters mode, because with no such noun it is genuinely
+        // ambiguous and the existing reading is the established one.
+        if let sight = sightTranslation(in: text) {
+            return sight
+        }
+
+        // A one-shot: "how do you say good morning in French". Before the mode
+        // and before the rest of the table, because a translation request can
+        // contain any words at all — "how do you say what time is it in French"
+        // would otherwise be answered with the time.
         if let translation = translationRequest(in: input) {
             return translation
         }
@@ -331,6 +362,66 @@ enum Router {
     /// contain anything at all — "how do you say what time is it in French"
     /// would otherwise be answered with the time, which is both wrong and
     /// exactly the kind of confident mis-answer D-43 exists to prevent.
+    /// Things you can point a camera at.
+    ///
+    /// Open-ended by nature, so this is not a closed world and is not trying to
+    /// be — it is the evidence that "this" refers to something *in front of him*
+    /// rather than to the conversation. Missing a noun costs a fallthrough to an
+    /// ordinary scan, which reads the page anyway.
+    private static let sightNouns = [
+        "menu", "sign", "page", "label", "poster", "notice", "document",
+        "letter", "receipt", "packet", "package", "bottle", "box", "board",
+        "screen", "card", "paper", "book", "ingredients", "instructions",
+        "leaflet", "form", "ticket", "plaque", "banner", "wrapper"
+    ]
+
+    /// "Translate this menu" — words on a thing he is holding up.
+    ///
+    /// Three gates, and all three are load-bearing:
+    ///
+    /// 1. **A translate cue**, or a named language attached to a "say". Without
+    ///    this, "what does this sign say" — which today correctly *reads* the
+    ///    sign — would start being translated into English, which is both wrong
+    ///    and slower.
+    /// 2. **A demonstrative**, the same back-reference rule the scan needles and
+    ///    `ScanFollowUp` already use. It is what separates "translate this menu"
+    ///    from "translate the menu I sent you".
+    /// 3. **A sight noun**, or an explicit looking-at phrase. This is what keeps
+    ///    "translate this into Hindi" out: with no noun it is genuinely
+    ///    ambiguous between a held-up page and the conversation, and the
+    ///    established reading wins rather than being quietly changed.
+    ///
+    /// The target defaults to English because that is what "translate this menu"
+    /// means when said by someone who cannot read the menu.
+    private static func sightTranslation(in text: String) -> Intent? {
+        let named = Tongues.firstNamed(in: text)?.code
+
+        let hasTranslateCue = contains(text, ["translate", "translation"])
+        let hasSayInLanguage = named != nil && contains(text, [" say", "says", " read"])
+        guard hasTranslateCue || hasSayInLanguage else { return nil }
+
+        // "Translate what I'm looking at" names no object at all, so it satisfies
+        // both gates on its own — it is *more* explicitly about the camera than
+        // "translate this menu", not less.
+        let lookingAt = contains(text, ["looking at", "in front of me", "point the camera",
+                                        "with the camera", "through the camera"])
+
+        let demonstrative = contains(text, ["this", "that", "it "]) || text.hasSuffix("it")
+        guard demonstrative || lookingAt else { return nil }
+
+        let hasNoun = sightNouns.contains { contains(text, [$0]) }
+            || contains(text, ["this photo", "that photo", "this picture", "that picture",
+                               "this screenshot", "that screenshot", "this image", "that image"])
+        guard hasNoun || lookingAt else { return nil }
+
+        // English unless he named something else. A language named *as the
+        // source* — "translate this Hindi menu" — lands here too and would set
+        // the target to Hindi, which is why `SightTranslator` reports
+        // `.alreadyThere` rather than round-tripping: the detector, not the
+        // sentence, is the authority on what the page is written in.
+        return .scan(source: scanSource(in: text), purpose: .translate(code: named ?? "en"))
+    }
+
     private static func translationRequest(in input: String) -> Intent? {
         let lowered = input.lowercased()
 

@@ -99,6 +99,25 @@ final class Translator {
         try await translate(english, from: Self.english, to: Self.hindi)
     }
 
+    /// Anything → anything, for text read off a photograph.
+    ///
+    /// The other three entry points all have English or Hindi hard-coded on one
+    /// side, because a conversation always has FRIDAY's own language on one end
+    /// of it. A scanned menu has neither: the source is whatever the sign
+    /// happened to be printed in, detected by `SightTranslator`, and the target
+    /// is whatever he asked for. Both sides arrive as codes.
+    func translate(
+        _ text: String,
+        from source: String,
+        into target: String
+    ) async throws(TranslatorFailure) -> String {
+        try await translate(
+            text,
+            from: Locale.Language(identifier: source),
+            to: Locale.Language(identifier: target)
+        )
+    }
+
     /// A session is built per call and never stored, which is the point.
     ///
     /// Holding one and reusing it does not compile under strict concurrency:
