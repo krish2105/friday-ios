@@ -53,6 +53,12 @@ final class SpeechInput {
     private(set) var level: Float = 0
 
     private let audioEngine = AVAudioEngine()
+
+    /// Resolved once by `prepareAssets()` and reused. The *locale* is what is
+    /// durable here — the transcriber built from it is not (see `start()`).
+    private var locale: Locale?
+
+    /// Rebuilt every turn. Never reuse one across turns.
     private var transcriber: SpeechTranscriber?
     private var analyzer: SpeechAnalyzer?
     private var inputBuilder: AsyncStream<AnalyzerInput>.Continuation?
@@ -108,15 +114,8 @@ final class SpeechInput {
 
         do {
             let locale = await Self.resolveLocale()
-            let transcriber = SpeechTranscriber(
-                locale: locale,
-                transcriptionOptions: [],
-                // .volatileResults is what makes words appear *as* you speak
-                // rather than only at the end of a phrase.
-                reportingOptions: [.volatileResults],
-                attributeOptions: []
-            )
-            self.transcriber = transcriber
+            let transcriber = Self.makeTranscriber(locale: locale)
+            self.locale = locale
 
             // ✅ SEAM RESOLVED (S-1) — verified against the shipping
             // Speech.swiftinterface in the macOS 26 SDK (iOS variant). All
@@ -147,6 +146,19 @@ final class SpeechInput {
         }
     }
 
+    /// One transcriber, configured the same way every time.
+    ///
+    /// `.volatileResults` is what makes words appear *as* you speak rather than
+    /// only at the end of a phrase.
+    private static func makeTranscriber(locale: Locale) -> SpeechTranscriber {
+        SpeechTranscriber(
+            locale: locale,
+            transcriptionOptions: [],
+            reportingOptions: [.volatileResults],
+            attributeOptions: []
+        )
+    }
+
     /// Device locale when its model is available, otherwise en-US.
     private static func resolveLocale() async -> Locale {
         let supported = await SpeechTranscriber.supportedLocales
@@ -171,8 +183,22 @@ final class SpeechInput {
     /// Begin transcribing. The stream yields the transcript so far, growing as
     /// results arrive, and finishes when transcription ends.
     func start() async throws -> AsyncStream<String> {
-        guard let transcriber else { throw SpeechInputError.notPrepared }
+        guard let locale else { throw SpeechInputError.notPrepared }
         guard !isCapturing else { throw SpeechInputError.inputUnavailable }
+
+        // A transcriber is SINGLE-USE. `stop()` calls
+        // `finalizeAndFinishThroughEndOfInput()`, which permanently finishes
+        // this transcriber's results stream. Handing a finished one to a fresh
+        // `SpeechAnalyzer` traps inside the framework on the second turn:
+        //
+        //     TranscriberCommon.worker.setter
+        //     SpeechAnalyzer.setWorkers(for:reusingFrom:preservingFunctionOf:)
+        //     SpeechAnalyzer.prepareModulesIfNeeded()
+        //
+        // Reproduced three times on device. The locale is the durable thing;
+        // the transcriber is per-turn.
+        let transcriber = Self.makeTranscriber(locale: locale)
+        self.transcriber = transcriber
 
         let analyzer = SpeechAnalyzer(modules: [transcriber])
         self.analyzer = analyzer
@@ -250,6 +276,8 @@ final class SpeechInput {
 
         resultsTask = nil
         analyzer = nil
+        // Discarded deliberately: it is finished and must never be reused.
+        transcriber = nil
         return final
     }
 
