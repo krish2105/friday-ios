@@ -10,5 +10,6 @@ import SwiftUI
 struct FridayActivityBundle: WidgetBundle {
     var body: some Widget {
         FridayLiveActivity()
+        FridayListenControl()
     }
 }

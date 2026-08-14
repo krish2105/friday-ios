@@ -36,6 +36,9 @@
 		AA000000000000000000081E /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071E /* Haptics.swift */; };
 		AA000000000000000000081F /* FridayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071F /* FridayAttributes.swift */; };
 		AA0000000000000000000820 /* LiveActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000720 /* LiveActivityController.swift */; };
+		AA0000000000000000000842 /* StartListeningIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000742 /* StartListeningIntent.swift */; };
+		AA0000000000000000000843 /* StartListeningIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000742 /* StartListeningIntent.swift */; };
+		AA0000000000000000000844 /* FridayListenControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000743 /* FridayListenControl.swift */; };
 		AA0000000000000000000841 /* AskFridayIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000741 /* AskFridayIntent.swift */; };
 		AA0000000000000000000840 /* Intent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000740 /* Intent.swift */; };
 		AA0000000000000000000830 /* FridayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071F /* FridayAttributes.swift */; };
@@ -72,6 +75,8 @@
 		AA0000000000000000000300 /* FRIDAY.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FRIDAY.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000000301 /* FridayActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FridayActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000000701 /* FRIDAYApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FRIDAYApp.swift; sourceTree = "<group>"; };
+		AA0000000000000000000742 /* StartListeningIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartListeningIntent.swift; sourceTree = "<group>"; };
+		AA0000000000000000000743 /* FridayListenControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayListenControl.swift; sourceTree = "<group>"; };
 		AA0000000000000000000741 /* AskFridayIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskFridayIntent.swift; sourceTree = "<group>"; };
 		AA0000000000000000000740 /* Intent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intent.swift; sourceTree = "<group>"; };
 		AA0000000000000000000702 /* FridayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayState.swift; sourceTree = "<group>"; };
@@ -224,6 +229,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000741 /* AskFridayIntent.swift */,
+				AA0000000000000000000742 /* StartListeningIntent.swift */,
 			);
 			path = Intents;
 			sourceTree = "<group>";
@@ -242,6 +248,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000730 /* FridayActivityBundle.swift */,
+				AA0000000000000000000743 /* FridayListenControl.swift */,
 				AA0000000000000000000731 /* Info.plist */,
 			);
 			path = FridayActivity;
@@ -350,6 +357,7 @@
 				AA0000000000000000000802 /* FridayState.swift in Sources */,
 				AA0000000000000000000840 /* Intent.swift in Sources */,
 				AA0000000000000000000841 /* AskFridayIntent.swift in Sources */,
+				AA0000000000000000000842 /* StartListeningIntent.swift in Sources */,
 				AA0000000000000000000803 /* FridayEngine.swift in Sources */,
 				AA0000000000000000000804 /* Availability.swift in Sources */,
 				AA0000000000000000000805 /* ContentView.swift in Sources */,
@@ -384,6 +392,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA0000000000000000000832 /* FridayActivityBundle.swift in Sources */,
+				AA0000000000000000000843 /* StartListeningIntent.swift in Sources */,
+				AA0000000000000000000844 /* FridayListenControl.swift in Sources */,
 				AA0000000000000000000831 /* FridayLiveActivity.swift in Sources */,
 				AA0000000000000000000830 /* FridayAttributes.swift in Sources */,
 			);

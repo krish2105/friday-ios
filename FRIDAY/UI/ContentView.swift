@@ -98,7 +98,17 @@ struct ContentView: View {
             pulsing = true
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { availability.refresh() }
+            guard phase == .active else { return }
+            availability.refresh()
+
+            // Launched from the Control Centre control. Checked here rather
+            // than via a notification because the intent runs while the app is
+            // still coming up, and a notification posted before this view
+            // exists would simply be lost.
+            if UserDefaults.standard.bool(forKey: StartListeningIntent.pendingKey) {
+                UserDefaults.standard.set(false, forKey: StartListeningIntent.pendingKey)
+                Task { await engine.startListening() }
+            }
         }
         .sheet(isPresented: $showSettings) {
             SettingsView(output: engine.voice)
