@@ -44,6 +44,25 @@ final class LanguageEngine {
 
     private let reminders: ReminderService
 
+    /// Greedy sampling, always.
+    ///
+    /// The default is random sampling, which on a ~3B model produces exactly
+    /// the failure seen on device: "what time is it" answered with "what's for
+    /// dinner". It samples a plausible-looking token early and then commits to
+    /// it. FRIDAY is a utility assistant, not a creative writer — the same
+    /// question should give the same answer, and a wrong-but-fluent reply is
+    /// the worst outcome here.
+    ///
+    /// This also makes the persona and tool-routing rules bind harder, since
+    /// the model stops exploring low-probability continuations that ignore
+    /// them. `maximumResponseTokens` is a backstop against runaway generation;
+    /// it sits well above the ~3-sentence target so it never truncates a real
+    /// reply mid-sentence and leaves TTS reading a fragment.
+    private static let generation = GenerationOptions(
+        sampling: .greedy,
+        maximumResponseTokens: 256
+    )
+
     init(reminders: ReminderService) {
         self.reminders = reminders
         session = Self.makeSession(reminders: reminders)
@@ -119,7 +138,8 @@ final class LanguageEngine {
             // optional until the model has filled it in.
             let stream = session.streamResponse(
                 to: prompt(for: input),
-                generating: FridayReply.self
+                generating: FridayReply.self,
+                options: Self.generation
             )
 
             var spoken: String?

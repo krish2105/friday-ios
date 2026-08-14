@@ -30,9 +30,17 @@ final class LiveActivityController {
         ActivityAuthorizationInfo().areActivitiesEnabled
     }
 
+    /// Why the last attempt did nothing. Surfaced in the footer while the Live
+    /// Activity is being brought up on device — both failure paths below were
+    /// silent, which made "nothing appears" impossible to diagnose.
+    private(set) var lastFailure: String?
+
     /// Single entry point, driven by the engine's state.
     func sync(state: FridayState, snippet: String) {
-        guard isEnabled else { return }
+        guard isEnabled else {
+            lastFailure = "disabled in Settings"
+            return
+        }
 
         guard let status = Self.status(for: state) else {
             // Back to rest — nothing worth occupying the Island.
@@ -61,9 +69,11 @@ final class LiveActivityController {
                 content: ActivityContent(state: content, staleDate: nil),
                 pushType: nil
             )
+            lastFailure = nil
         } catch {
             // Rate limited, disabled mid-flight, or too many activities.
             activity = nil
+            lastFailure = "\(error)"
         }
     }
 
