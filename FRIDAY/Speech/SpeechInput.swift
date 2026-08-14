@@ -94,8 +94,14 @@ final class SpeechInput {
             )
             self.transcriber = transcriber
 
-            // ⚠️ API SEAM — asset installation. If these names are wrong, this
-            // block is the only thing that changes.
+            // ✅ SEAM RESOLVED (S-1) — verified against the shipping
+            // Speech.swiftinterface in the macOS 26 SDK (iOS variant). All
+            // three names were correct:
+            //   AssetInventory.assetInstallationRequest(supporting: [any SpeechModule])
+            //     async throws -> AssetInstallationRequest?      (note: Optional)
+            //   AssetInstallationRequest: NSObject, ProgressReporting, Sendable
+            //     → `.progress` is the ProgressReporting requirement
+            //   AssetInstallationRequest.downloadAndInstall() async throws
             if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
                 assetState = .preparing(nil)
 
@@ -150,9 +156,16 @@ final class SpeechInput {
         let (inputSequence, inputBuilder) = AsyncStream<AnalyzerInput>.makeStream()
         self.inputBuilder = inputBuilder
 
-        // ⚠️ API SEAM — the analyser dictates its own format. The iPhone mic
-        // runs at 48 kHz, so conversion is mandatory: feeding raw hardware
-        // buffers is the failure that produces silence rather than an error.
+        // ✅ SEAM RESOLVED (S-2) — verified against the shipping
+        // Speech.swiftinterface. Signature is exactly:
+        //   static func bestAvailableAudioFormat(compatibleWith: [any SpeechModule])
+        //     async -> AVAudioFormat?
+        // `async` and Optional, both handled. (A second overload taking
+        // `considering naturalFormat:` also exists; not needed here.)
+        //
+        // The analyser dictates its own format. The iPhone mic runs at 48 kHz,
+        // so conversion is mandatory: feeding raw hardware buffers is the
+        // failure that produces silence rather than an error.
         let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [transcriber])
 
         let (partials, partialsBuilder) = AsyncStream<String>.makeStream()
@@ -200,8 +213,13 @@ final class SpeechInput {
         inputBuilder?.finish()
         inputBuilder = nil
 
-        // ⚠️ API SEAM — flush call. Must happen before reading the results task
-        // so trailing final results are included.
+        // ✅ SEAM RESOLVED (S-3) — verified against the shipping
+        // Speech.swiftinterface. `finalizeAndFinishThroughEndOfInput() async
+        // throws` is real and is the correct call here. HANDOVER §5 suspected
+        // the name was invented; it is not. `finalizeAndFinish(through: CMTime)`
+        // also exists but takes a time, so it is the wrong one for "flush
+        // everything". Must happen before reading the results task so trailing
+        // final results are included.
         try? await analyzer?.finalizeAndFinishThroughEndOfInput()
 
         let final = await resultsTask?.value ?? ""

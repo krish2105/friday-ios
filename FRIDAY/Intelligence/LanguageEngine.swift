@@ -51,13 +51,20 @@ final class LanguageEngine {
 
     // MARK: - Session
 
-    // ⚠️ API SEAM — the only place a session is constructed.
+    // ✅ SEAM RESOLVED (S-4) — verified against the shipping
+    // FoundationModels.swiftinterface in the macOS 26 SDK (iOS variant).
     //
-    // The initialiser is `@InstructionsBuilder instructions: () throws -> Instructions`,
-    // so the persona is passed as a trailing closure. The commonly-shown
-    // `LanguageModelSession(instructions: "…")` form works for a string
-    // *literal*, but `FridayPersona.instructions` is a `String` constant, which
-    // is why the builder form is used here.
+    // `LanguageModelSession` ships four initialisers, all with
+    // `model:` and `tools:` defaulted:
+    //   init(model:tools:instructions: String? = nil)        // @_disfavoredOverload
+    //   init(model:tools:@InstructionsBuilder instructions:) // used here
+    //   init(model:tools:instructions: Instructions? = nil)
+    //   init(model:tools:transcript: Transcript)
+    //
+    // Correction to D-16's rationale: the `String?` overload accepts a String
+    // *constant* perfectly well, so `instructions: FridayPersona.instructions`
+    // would also have compiled. The builder form is kept because it is the
+    // non-disfavoured overload and reads better — not because it was required.
     private static func makeSession(reminders: ReminderService) -> LanguageModelSession {
         LanguageModelSession(
             tools: [
@@ -106,8 +113,10 @@ final class LanguageEngine {
         defer { isResponding = false }
 
         do {
-            // Streaming yields `FridayReply.PartiallyGenerated`, where every
-            // property is optional until the model has filled it in.
+            // Streaming yields `ResponseStream<FridayReply>.Snapshot`, NOT the
+            // partial directly. `snapshot.content` is the
+            // `FridayReply.PartiallyGenerated`, where every property is
+            // optional until the model has filled it in.
             let stream = session.streamResponse(
                 to: prompt(for: input),
                 generating: FridayReply.self
@@ -116,12 +125,12 @@ final class LanguageEngine {
             var spoken: String?
             var tone: String?
 
-            for try await partial in stream {
-                if let text = partial.spoken {
+            for try await snapshot in stream {
+                if let text = snapshot.content.spoken {
                     spoken = text
                     partialSpoken = text
                 }
-                if let mood = partial.tone {
+                if let mood = snapshot.content.tone {
                     tone = mood
                 }
             }
@@ -155,8 +164,16 @@ final class LanguageEngine {
 
     // MARK: - Error mapping
 
-    // ⚠️ API SEAM — `GenerationError` has nine cases in iOS 26. Only the three
-    // that need distinct handling are matched by name; the rest fall through.
+    // ✅ SEAM RESOLVED (S-5) — verified against the shipping
+    // FoundationModels.swiftinterface. `GenerationError` has exactly nine
+    // cases, every one carrying a `Context`:
+    //   exceededContextWindowSize, assetsUnavailable, guardrailViolation,
+    //   unsupportedGuide, unsupportedLanguageOrLocale, decodingFailure,
+    //   rateLimited, concurrentRequests, refusal(Refusal, Context)
+    //
+    // Per D-17 only the three needing distinct handling are matched by name.
+    // The names used below are confirmed correct. `default:` covers the other
+    // six and also absorbs any case Apple adds, with no @unknown warning.
     private static func classify(_ error: LanguageModelSession.GenerationError) -> LanguageEngineFailure {
         switch error {
         case .exceededContextWindowSize:
