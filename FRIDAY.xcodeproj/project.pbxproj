@@ -46,6 +46,7 @@
 		AA0000000000000000000883 /* FridayTimerActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000782 /* FridayTimerActivity.swift */; };
 		AA0000000000000000000884 /* FridayActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000783 /* FridayActions.swift */; };
 		AA0000000000000000000885 /* ScanFollowUp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000784 /* ScanFollowUp.swift */; };
+		AA0000000000000000000886 /* MorningBrief.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000785 /* MorningBrief.swift */; };
 		AA0000000000000000000870 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000770 /* ShareViewController.swift */; };
 		AA0000000000000000000871 /* SharedTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000771 /* SharedTextView.swift */; };
 		AA0000000000000000000872 /* TextScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000750 /* TextScanner.swift */; };
@@ -128,6 +129,7 @@
 		AA0000000000000000000782 /* FridayTimerActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayTimerActivity.swift; sourceTree = "<group>"; };
 		AA0000000000000000000783 /* FridayActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayActions.swift; sourceTree = "<group>"; };
 		AA0000000000000000000784 /* ScanFollowUp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanFollowUp.swift; sourceTree = "<group>"; };
+		AA0000000000000000000785 /* MorningBrief.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorningBrief.swift; sourceTree = "<group>"; };
 		AA0000000000000000000770 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		AA0000000000000000000771 /* SharedTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedTextView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000772 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -332,6 +334,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000755 /* FridayNotifier.swift */,
+				AA0000000000000000000785 /* MorningBrief.swift */,
 			);
 			path = Notify;
 			sourceTree = "<group>";
@@ -575,6 +578,7 @@
 				AA0000000000000000000882 /* TimerActivityController.swift in Sources */,
 				AA0000000000000000000884 /* FridayActions.swift in Sources */,
 				AA0000000000000000000885 /* ScanFollowUp.swift in Sources */,
+				AA0000000000000000000886 /* MorningBrief.swift in Sources */,
 				AA0000000000000000000841 /* AskFridayIntent.swift in Sources */,
 				AA0000000000000000000842 /* StartListeningIntent.swift in Sources */,
 				AA0000000000000000000803 /* FridayEngine.swift in Sources */,

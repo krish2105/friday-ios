@@ -27,6 +27,15 @@ final class FridayNotifier {
         didSet { defaults.set(nudgesHimself, forKey: Key.nudges) }
     }
 
+    /// Whether FRIDAY sends an unprompted morning brief.
+    ///
+    /// **Off by default.** Everything else in this app answers a question; this
+    /// is the only thing it does uninvited, and a daily notification nobody
+    /// asked for is spam with a persona.
+    var briefsInTheMorning: Bool {
+        didSet { defaults.set(briefsInTheMorning, forKey: Key.brief) }
+    }
+
     /// Whether iOS has been asked yet, and what it said.
     private(set) var isAuthorised: Bool?
 
@@ -34,6 +43,7 @@ final class FridayNotifier {
 
     private enum Key {
         static let nudges = "friday.nudgesHimself"
+        static let brief = "friday.morningBrief"
     }
 
     enum Action {
@@ -46,6 +56,7 @@ final class FridayNotifier {
 
     init() {
         nudgesHimself = defaults.object(forKey: Key.nudges) as? Bool ?? true
+        briefsInTheMorning = defaults.object(forKey: Key.brief) as? Bool ?? false
     }
 
     // MARK: - Permission

@@ -170,6 +170,11 @@ struct ContentView: View {
             guard phase == .active else { return }
             availability.refresh()
 
+            // Re-composed on every foreground, because tomorrow's calendar is
+            // knowable today — which is what lets the brief exist with no
+            // background execution at all.
+            Task { await MorningBrief.schedule(notifier: engine.notifier) }
+
             // Launched from the Control Centre control. Checked here rather
             // than via a notification because the intent runs while the app is
             // still coming up, and a notification posted before this view

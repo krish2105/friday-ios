@@ -128,6 +128,7 @@ struct SettingsView: View {
     private var nudgeSection: some View {
         Section {
             Toggle("FRIDAY reminds you", isOn: $notifier.nudgesHimself)
+            Toggle("Morning brief", isOn: $notifier.briefsInTheMorning)
         } header: {
             Text("Reminders")
         } footer: {
@@ -137,6 +138,12 @@ struct SettingsView: View {
                 Text("FRIDAY delivers the reminder herself, in her own words, with Done and Snooze on the notification. It's still saved to Apple Reminders — just without a second alert.")
             } else {
                 Text("Apple Reminders alerts you as usual, and FRIDAY stays quiet. The reminder is saved either way.")
+            }
+
+            if notifier.briefsInTheMorning {
+                Text("At 7:30 she'll tell you what the day holds. Composed while the app is open, so it's as fresh as the last time you opened it.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
     }
