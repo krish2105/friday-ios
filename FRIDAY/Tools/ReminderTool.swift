@@ -79,7 +79,18 @@ struct ReminderTool: Tool {
     let service: ReminderService
 
     let name = "prepareReminder"
-    let description = "Prepare a reminder for the user to approve. Does not create it."
+
+    // Deliberately restrictive. The old wording — "Prepare a reminder for the
+    // user to approve. Does not create it." — said what the tool does but never
+    // when NOT to use it, and on device the model staged a reminder titled
+    // "What time is it?" in response to someone asking the time. Tool
+    // descriptions drive selection far more strongly than persona rules do, so
+    // the guard belongs here.
+    let description = """
+    Stage a reminder for the user to approve. Use ONLY when he explicitly asks \
+    to be reminded of something, such as "remind me to call mom at six". \
+    Never use it to answer a question. Creates nothing on its own.
+    """
 
     @Generable
     struct Arguments {
