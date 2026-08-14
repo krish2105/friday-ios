@@ -309,6 +309,28 @@ The old §8 still stands except where noted. New decisions from device work:
   the Control Centre control there is no `openAppWhenRun` escape hatch, because a widget
   must render before anyone taps it. It is a launcher instead.
 
+### D-18 is now probably unreachable — do not delete it, do not trust it
+
+`LanguageEngine` still carries the full context-overflow path: catch
+`exceededContextWindowSize`, rebuild the session preserving the persona, re-seed the last
+exchange through the next prompt, and retry the same input once so the turn is not lost.
+
+**Ten consecutive chat turns on device produced no reset.** Dropping the tool schemas (§5)
+handed the persona and the conversation the entire ~4,096 token budget that four schemas
+used to share, so overflow is now much further away than when D-18 was written.
+
+Three things follow, and they pull in different directions:
+
+- It is **not dead code.** A long enough conversation still reaches it, and re-registering
+  tools would bring it straight back into play.
+- It is **effectively untestable through the UI** at present. Nobody has seen it run.
+- It is therefore **unverified**, and must not be described as working. The reset logic, the
+  carry-over re-seed and the single retry have never executed on device.
+
+If you need to exercise it, the practical route is to temporarily re-register the tools in
+`makeSession()`, which restores the old budget pressure, rather than typing until it
+happens.
+
 ### D-09 needs re-deciding
 
 **`SpeechDetector` now conforms to `SpeechModule`** in the shipping SDK:
@@ -333,6 +355,10 @@ call, not the next session's.
 3. **Keyword routing has gaps.** "Do I have time for coffee?" routes to the clock.
    One-line fixes in `Router` as they turn up.
 4. **Free-account provisioning expires every 7 days.** The app stops launching until rebuilt.
+5. **D-18's overflow path is unverified** and probably unreachable in normal use — see the
+   section above. Written, correct on inspection, never observed running.
+6. **Apple Intelligence toggled off is still untested.** Left until last because turning it
+   off can purge the models and force a multi-GB re-download.
 
 ---
 
