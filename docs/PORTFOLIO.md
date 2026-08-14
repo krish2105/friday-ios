@@ -348,10 +348,10 @@ version abandons the losing side instead. A stranded task is a small leak; a str
 
 | | |
 |---|---|
-| Swift files / targets | 51 / 2 |
+| Swift files / targets | 68 / 3 |
 | Idle CPU (Release) | 2% against a 5% budget |
 | Memory | ~21 MB |
 | Network calls | 0 |
 | API cost | £0 |
-| Routing cases under test | 65, re-run on every change |
-| Defects found on device | 18, none catchable by the compiler |
+| Routing cases under test | 100, re-run on every change |
+| Defects found on device | 21, none catchable by the compiler |

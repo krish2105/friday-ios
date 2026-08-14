@@ -29,7 +29,7 @@ struct CapabilitiesSheet: View {
             .init(icon: "calendar.badge.plus", name: "Add an event", phrase: "Put lunch in my calendar at 1pm"),
             .init(icon: "checklist", name: "Reminders", phrase: "Remind me to call mom at 6"),
             .init(icon: "figure.walk", name: "Steps and distance", phrase: "How many steps have I done"),
-            .init(icon: "timer", name: "Timers", phrase: "Set a timer for 10 minutes")
+            .init(icon: "timer", name: "Timers", phrase: "Set a timer for 10 minutes — it counts down in the Dynamic Island")
         ]),
         Group(title: "Working things out", items: [
             .init(icon: "percent", name: "Percentages and sums", phrase: "What's 15% of 4200"),
@@ -47,7 +47,9 @@ struct CapabilitiesSheet: View {
             .init(icon: "folder", name: "A PDF", phrase: "Read this PDF"),
             .init(icon: "qrcode.viewfinder", name: "A QR code or barcode", phrase: "What's this QR code"),
             .init(icon: "receipt", name: "A receipt, pass or business card", phrase: "Read this — she spots them herself"),
-            .init(icon: "camera.viewfinder", name: "A screenshot you just took", phrase: "She offers, you tap")
+            .init(icon: "camera.viewfinder", name: "A screenshot you just took", phrase: "She offers, you tap"),
+            .init(icon: "calendar.badge.clock", name: "Act on what she read", phrase: "Add that to my calendar"),
+            .init(icon: "square.and.arrow.up", name: "From any other app", phrase: "Share → Read with FRIDAY")
         ]),
         Group(title: "Languages", items: [
             .init(icon: "character.bubble", name: "Translate", phrase: "How do you say good morning in French"),
@@ -92,6 +94,12 @@ struct CapabilitiesSheet: View {
                             .accessibilityLabel("\(item.name). Say: \(item.phrase)")
                         }
                     }
+                }
+
+                Section("Beyond the app") {
+                    Text("Ask Siri, add the Home Screen widget, or build Shortcuts from FRIDAY's actions — steps, your day, this phone, translate, and working things out all return a value you can pass on.")
+                        .font(.system(size: 13, design: .rounded))
+                        .foregroundStyle(.secondary)
                 }
 
                 Section {

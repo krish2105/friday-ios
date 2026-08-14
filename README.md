@@ -99,7 +99,13 @@ works.** Only conversation degrades. Half the app stopped depending on the model
 | **Receipts & boarding passes** | Structured extraction, every field checked against the page |
 | **QR & barcodes** | Reads them; never opens anything without a press |
 | **Hindi** | Type in Hindi, hear Hindi back — on-device translation both ways |
-| **Translation** | 22 languages, spoken in a voice that can pronounce them |
+| **Translation** | 22 languages, spoken in a voice that can pronounce them — plus a live mode |
+| **Timers** | Counting down in the Dynamic Island, ticked by the system |
+| **Maths & units** | "15% of 4,200", "12 miles in km" — computed in Swift, never guessed |
+| **Follow-ups** | "Add that to my calendar" after she's read something |
+| **Shortcuts** | Five actions return values you can pass to the next step |
+| **Share sheet** | "Read with FRIDAY" from any app |
+| **Home Screen widget** | Next event and today's steps |
 
 **Nothing consequential happens without a press.** Reminders, calendar entries, phone calls
 and opening a scanned link all *stage* first. `EKEventStore.save` is reachable solely from the
@@ -133,7 +139,7 @@ audio modes.
 | Memory | ~21 MB |
 | Network calls | 0 |
 | Build | 0 errors, 0 warnings under `SWIFT_STRICT_CONCURRENCY = complete` |
-| Routing cases under test | 65, re-run on every change |
+| Routing cases under test | 100, re-run on every change |
 | Defects found on device | 18 — none catchable by the compiler |
 
 Getting idle CPU from 8% to 2% meant discovering that **Liquid Glass re-samples anything
@@ -247,7 +253,8 @@ Builds also expire every 7 days.
 - [x] Structured extraction — receipts and boarding passes, verified against the page
 - [x] Contacts, calendar writes, step counts, FRIDAY's own reminder notifications
 - [x] Hindi, and translation into 22 languages
-- [ ] Apple Watch companion, richer Shortcuts actions
+- [x] Shortcuts and Spotlight actions, share extension, Home Screen widget
+- [ ] Apple Watch companion
 - [ ] Optional remote brain over LiveKit *(personal use, not App Store eligible)*
 
 ---

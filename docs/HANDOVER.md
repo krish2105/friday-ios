@@ -1,6 +1,6 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§2, §3, §4, D-09, D-45, D-52, D-53–D-70, §10)
+**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§2, §3, §4, D-09, D-45, D-52, D-53–D-73, §10)
 **Repo state:** `main`, stage 3 landed at `15bca6f` · **Commits:** 47
 
 This replaces the previous handover, which was written by a cloud session with no Swift
@@ -92,7 +92,7 @@ session was diagnosed this way in about a minute.
 
 ## 3. What is built
 
-63 Swift files across **three** targets.
+68 Swift files across **three** targets.
 
 | Dir | Files | Contents |
 |---|---|---|
@@ -102,12 +102,12 @@ session was diagnosed this way in about a minute.
 | `Speech/` | 3 | `AudioSessionManager`, `SpeechInput`, `SpeechOutput` |
 | `Tools/` | 10 | `FridayTool`, `TimeTool`, `DeviceTool`, `WeatherTool`, `CalendarTool`, `ReminderTool`, `ContactTool`, `MotionTool`, `ReckonTool`, `TimerTool` |
 | `UI/` | 13 | `ContentView`, `ConversationView`, `OrbView`, `TalkButton`, `SettingsView`, `AmbientBackground`, `GlassSurface`, `FridayTheme`, `Haptics`, **`ActionSlot`**, **`InputBar`**, **`StatusHeader`**, **`CapabilitiesSheet`**, **`HeroPanel`** |
-| `LiveActivity/` | 3 | `FridayAttributes`, `LiveActivityController`, `FridayLiveActivity` |
-| `Intents/` | 3 | `AskFridayIntent` (+ `FridayAnswer`, `FridayShortcuts`), `StartListeningIntent`, `FridaySnippet` |
-| `Vision/` | 8 | `TextScanner`, `DocumentCamera`, `ReceiptReader`, `BoardingPassReader`, `BarcodeReader`, `LiveScanner`, `PDFReader`, `CardReader` |
+| `LiveActivity/` | 5 | `FridayAttributes`, `LiveActivityController`, `FridayLiveActivity`, `TimerAttributes`, `TimerActivityController` |
+| `Intents/` | 4 | `AskFridayIntent` (+ `FridayAnswer`, `FridayShortcuts`), `StartListeningIntent`, `FridaySnippet`, `FridayActions` |
+| `Vision/` | 9 | `TextScanner`, `DocumentCamera`, `ReceiptReader`, `BoardingPassReader`, `BarcodeReader`, `LiveScanner`, `PDFReader`, `CardReader`, `ScanFollowUp` |
 | `Language/` | 3 | `Bilingual`, `Translator`, `Tongues` |
 | `Notify/` | 1 | `FridayNotifier` |
-| `FridayActivity/` | 4 | `FridayActivityBundle` (`@main`), `FridayListenControl`, `FridayLockWidget`, `FridayStatusWidget` |
+| `FridayActivity/` | 5 | `FridayActivityBundle` (`@main`), `FridayListenControl`, `FridayLockWidget`, `FridayStatusWidget`, `FridayTimerActivity` |
 | `FridayShare/` | 2 | `ShareViewController`, `SharedTextView` — plus `TextScanner` and `PDFReader`, shared source |
 
 ### Per-session status
@@ -904,6 +904,60 @@ The old §8 still stands except where noted. New decisions from device work:
   **The target was hand-written into `project.pbxproj`**, mirroring `FridayActivity`'s shape,
   because D-04 keeps the file in `objectVersion = 56` by hand. `xcodebuild -list` confirming
   three targets is the cheap check that the edit parsed before spending a build on it.
+
+- **D-71 · Stage 10 — the Live Activity the app actually wanted.** §8 records that the state
+  activity is "close to unobservable" because FRIDAY's states last seconds; you cannot watch
+  something that has finished by the time you have looked down. A timer lasts minutes by
+  definition, which is the shape a Live Activity is *for*.
+
+  Every countdown is `Text(timerInterval:countsDown:)`, ticked by the **system** rather than
+  the app. That is what makes it cheap: the activity is requested once and never updated,
+  where a per-second push would exhaust ActivityKit's budget inside a minute and then silently
+  stop — leaving a frozen clock, which is worse than no clock.
+
+  **The Island and the notification are independent on purpose.** A Live Activity can be
+  disabled system-wide, and a timer that existed only there would never go off.
+
+  The compact trailing slot carries an explicit width and monospaced digits — without the
+  width the countdown clips the moment it needs a tens digit, and without monospacing the
+  layout jumps every second.
+
+  One thing this project had already paid for and I re-learned anyway: `Activity.end` must be
+  called **straight on the property, never via a local**. A local bound in a `@MainActor`
+  method takes the main actor's region and cannot be sent to a nonisolated method.
+  `LiveActivityController` documents it; the `guard let` form was written here first regardless.
+
+- **D-72 · Stage 11 — FRIDAY is composable.** `AskFridayIntent` answers anything, but *as a
+  conversation*. That is the wrong shape for automation: a shortcut wants a **value to pass
+  on**, and someone typing in Spotlight wants an answer without composing a sentence.
+
+  Five actions now return a `String` value as well as speaking it — steps, today, this phone,
+  translate, reckon. All route through `Router` and `Lookup`, so a shortcut and a spoken
+  question take the same path and cannot drift (D-43); `ReckonIntent` in particular parses
+  *through* `Router` rather than reimplementing the parse.
+
+  **Reminders, calendar writes and calls are deliberately absent.** Those stage behind a press,
+  and a shortcut running unattended is exactly the situation D-34 exists for.
+
+  `DeviceIntent` takes an `AppEnum` so Shortcuts offers a menu rather than a free text field.
+  Several phrases each, because Spotlight matches on those strings — a capability is findable
+  exactly as far as its phrasings reach, which is D-43's truth surfacing at the system level.
+
+- **D-73 · Stage 12 — a scan can lead somewhere.** "Add that to my calendar" after reading a
+  poster.
+
+  **The date comes from `NSDataDetector`, not the model**, and that is the whole safety
+  argument: a model asked to find a date in a page will always find one. This is D-44 applied
+  to the *absence* of a fact rather than the value of one — no date on the page means FRIDAY
+  asks when, rather than inventing a time for something read off a poster.
+
+  The back-reference is resolved **before** routing rather than by it: "add that to my
+  calendar" has no subject of its own, so `Router` would otherwise stage an event titled
+  "that". Every follow-up needle requires a back-reference word, which keeps "put lunch in my
+  calendar at 1pm" and "remind me to call mom at 6" out — both tested.
+
+  `lastScan` is session-scoped and never written to disk: ephemeral by decision, not omission.
+  It works a minute later and not tomorrow, which is the honest boundary.
 
 ### D-18 is now probably unreachable — do not delete it, do not trust it
 
