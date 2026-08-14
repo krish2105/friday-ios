@@ -74,6 +74,12 @@ final class FridayEngine {
     /// rather than understood.
     var translatingInto: String?
 
+    /// The last thing read, for a turn that says "add *that*".
+    ///
+    /// Session-scoped and never written to disk — it is part of a conversation,
+    /// and conversations here are ephemeral by decision.
+    private(set) var lastScan: ScanFollowUp.Scanned?
+
     /// Which photos the picker offers. Screenshots only when the offer raised
     /// it, so he is not hunting through a year of pictures for the one he took
     /// four seconds ago.
@@ -336,6 +342,15 @@ final class FridayEngine {
             }
         } else {
             asked = trimmed
+        }
+
+        // Acting on the last scan, before routing. "Add that to my calendar"
+        // has no subject of its own — it borrows one from what was just read —
+        // so `Router` would see a calendar write with the word "that" as its
+        // title. The back-reference has to be resolved before routing, not by it.
+        if let scan = lastScan, ScanFollowUp.isFollowUp(trimmed) {
+            await act(on: scan, wantsReminder: ScanFollowUp.wantsReminder(trimmed), at: replyIndex)
+            return
         }
 
         // Swift routes; the model only speaks. See `Intent` for why.
@@ -836,6 +851,34 @@ final class FridayEngine {
         await present(scanned: text)
     }
 
+    /// Stages a calendar entry or a reminder from what was just read.
+    ///
+    /// Staged, never written — D-34 holds here exactly as it does for a spoken
+    /// request, and arguably harder: the subject came off a photograph, so the
+    /// chance of it being wrong is higher, not lower.
+    private func act(on scan: ScanFollowUp.Scanned, wantsReminder: Bool, at replyIndex: Int) async {
+        let line: String
+
+        if wantsReminder {
+            reminders.stage(title: scan.title, when: scan.text)
+            line = reminders.pending.map {
+                "That's \($0.title), \($0.spokenWhen), boss. Say the word and I'll add it."
+            } ?? "I couldn't work out when, boss."
+        } else if scan.date != nil, events.stage(title: scan.title, when: scan.text),
+                  let pending = events.pending {
+            line = "That's \(pending.title), \(pending.spokenWhen), boss. Say the word and I'll add it."
+        } else {
+            // No date on the page. Asking is the honest answer — the alternative
+            // is inventing a time for something read off a poster.
+            line = "I couldn't find a date on that one, boss. When should I put it down for?"
+        }
+
+        conversation[replyIndex].text = await voiced(line, factual: true)
+        conversation[replyIndex].tone = "calm"
+        Haptics.replyReceived()
+        await deliver(conversation[replyIndex].text)
+    }
+
     /// What to do with recognised text, whatever produced it.
     ///
     /// Extracted so a **PDF is answered exactly as a photograph is** — receipt
@@ -844,6 +887,9 @@ final class FridayEngine {
     /// happen to the words in it, and duplicating this would have let the two
     /// paths drift apart.
     private func present(scanned text: String) async {
+        // Remembered so the next turn can say "add that to my calendar".
+        lastScan = ScanFollowUp.scanned(text)
+
         // A receipt is worth more than a summary of a receipt, so it gets first
         // refusal. Three gates, and any of them declining costs nothing but the
         // ordinary summary below: Swift decides it looks like a receipt at all,
