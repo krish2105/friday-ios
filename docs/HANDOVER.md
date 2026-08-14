@@ -1,6 +1,7 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Repo state:** `main` @ `b16a92a` · **Commits:** 28
+**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-45, D-53–D-55, §10)
+**Repo state:** `main` @ `d9a0738` · **Commits:** 42
 
 This replaces the previous handover, which was written by a cloud session with no Swift
 toolchain. Everything it warned about has now been compiled, run on a physical iPhone 16 Pro,
@@ -91,7 +92,7 @@ session was diagnosed this way in about a minute.
 
 ## 3. What is built
 
-35 Swift files across two targets.
+37 Swift files across two targets.
 
 | Dir | Files | Contents |
 |---|---|---|
@@ -103,6 +104,7 @@ session was diagnosed this way in about a minute.
 | `UI/` | 9 | `ContentView`, `ConversationView`, `OrbView`, `TalkButton`, `SettingsView`, `AmbientBackground`, `GlassSurface`, `FridayTheme`, `Haptics` |
 | `LiveActivity/` | 3 | `FridayAttributes`, `LiveActivityController`, `FridayLiveActivity` |
 | `Intents/` | 2 | `AskFridayIntent` (+ `FridayAnswer`, `FridayShortcuts`), `StartListeningIntent` |
+| `Vision/` | 2 | `TextScanner`, `DocumentCamera` |
 | `FridayActivity/` | 3 | `FridayActivityBundle` (`@main`), `FridayListenControl`, `FridayLockWidget` |
 
 ### Per-session status
@@ -141,9 +143,23 @@ model. Only conversational turns degrade. Half the app keeps working with the mo
 App Intent, Siri shortcuts, Control Centre control and Lock Screen widget all built and
 verified. Two spec items could not be met as written — see D-51 and D-52.
 
+### Document reading — stages 1 and 2 are in, and NOT verified on device
+
+`Vision/` is a feature after Phase C, in three stages. Stage 1 (`TextScanner`,
+`RecognizeDocumentsRequest`) and stage 2 (photo library and live camera entry points, routed
+through `Router`) are committed. **Stage 3 — `@Generable` structured extraction, receipt to
+merchant/date/total — is not started.**
+
+Everything about stage 2 that a compiler can check has been checked: it builds with zero
+warnings, installs, launches, and the Router truth table passes 34 cases. **Nothing has ever
+actually scanned anything.** Per §1 that means it is unverified, and it must not be described
+as working until someone points the camera at a page. The list of what to try is in the
+stage 2 commit message (`9648aac`).
+
 ### Suggested next work
 
-Hardening (Router phrasings, the denied-permission paths), then either Session 8's LiveKit
+Verify stage 2 on device and delete the temporary diagnostic (§10.7). Then stage 3, or
+hardening (Router phrasings, the denied-permission paths), then either Session 8's LiveKit
 bridge or App Store preparation, which needs a paid account.
 
 ---
@@ -275,10 +291,11 @@ The old §8 still stands except where noted. New decisions from device work:
   from Master Build §11.
 - **D-44 · Factual answers are composed in Swift.** A 3B model paraphrasing a number can
   quietly change it — the worst failure an assistant has. Also fixes verbatim tool echo.
-- **D-45 · Greedy sampling.** Default random sampling produced "what time is it" answered
-  with "what's for dinner". `GenerationOptions(sampling: .greedy)`. **No
-  `maximumResponseTokens`** — a cap landing mid-structure leaves guided generation's value
-  incomplete and throws "Empty reply".
+- **D-45 · Greedy sampling.** ~~Default random sampling produced "what time is it" answered
+  with "what's for dinner". `GenerationOptions(sampling: .greedy)`.~~ **Half superseded on
+  2026-08-15 — see D-53.** The `maximumResponseTokens` half still stands: **no
+  `maximumResponseTokens`**, because a cap landing mid-structure leaves guided generation's
+  value incomplete and throws "Empty reply".
 - **D-46 · `WeatherTool` is not registered** (`weatherIsUsable = false`). On a free account
   WeatherKit can never succeed, and every call spent a location fix before failing. This
   follows D-32 rather than reversing it. Flip one constant when the account is upgraded.
@@ -312,6 +329,66 @@ The old §8 still stands except where noted. New decisions from device work:
   membership, which on a free account risks breaking provisioning outright (D-32). Unlike
   the Control Centre control there is no `openAppWhenRun` escape hatch, because a widget
   must render before anyone taps it. It is a launcher instead.
+
+- **D-53 · Seeded top-3 sampling, replacing greedy — and a Swift-side loop guard.**
+  `GenerationOptions(sampling: .random(top: 3, seed: 1))`.
+
+  On device on 2026-08-15, *"what languages do you know"* answered with the same run of
+  language names over and over — Marathi, Nepali, Urdu, Hindi, Bengali, Telugu, Marathi,
+  Tamil, Kannada, Malayalam, Gujarati, Punjabi, Sindhi, and round again — until the 20s
+  deadline killed it. FRIDAY then said *"that one's taking too long, boss"* about a turn that
+  was working exactly as instructed, and the retry failed differently again.
+
+  Root cause was **both halves of D-45 interacting**. `.greedy` takes the argmax at every
+  step, so once the model enters a repetition cycle it re-picks the same tokens forever,
+  deterministically; and with no `maximumResponseTokens` nothing bounded it.
+
+  Two things follow that are worth carrying forward:
+
+  - **The deadline was not at fault, and the intuitive fix was the wrong one.** It fired on a
+    turn that was actively producing tokens. Making it an *inactivity* deadline — the obvious
+    move — would have hung the app instead of erroring, because an active loop never goes
+    inactive. Read the symptom before rewriting the timer.
+  - **`seed:` dissolves D-45's dilemma.** D-45's real requirement was reproducibility, and
+    `.random(top:seed:)` takes an optional seed, which delivers it — the same prompt gives
+    the same reply — while `top: 3` stays near the argmax. Cycles break because the RNG state
+    has advanced by the time a repeated context comes round again. D-45's *other* reason for
+    greedy, that random sampling answered "what time is it" with "what's for dinner", stopped
+    applying at **D-43**: time is answered in Swift now and never reaches the model at all.
+
+  `LanguageEngine.trimmedAtRepetition` is the second layer, because no sampling mode is
+  guaranteed loop-free. A sixty-character window that has already appeared earlier in the
+  reply is a cycle, not a coincidence; the stream stops there and keeps the text from before
+  the repeat, which is the part the model actually meant. On the real 5,846-character runaway
+  that salvages a 128-character list of languages, so the turn answers instead of failing.
+  Checked against five realistic replies — a 333-char elaboration and a 216-char
+  non-repeating list among them — none are touched.
+
+- **D-54 · "Read this" opens the camera, not the photo library.** `Router` splits
+  `.scan(source:)` on whether he named something already on the phone — "this photo", "that
+  screenshot", "my photos" go to the library; everything else points the camera. A
+  demonstrative with no such noun means he is holding the thing up, and routing that through
+  the photo library is the wrong default for something meant to be a daily driver. One-line
+  flip in `Router.scanSource(in:)`.
+
+- **D-55 · The camera is VisionKit's document scanner, not a hand-built `AVCaptureSession`.**
+  Accuracy before effort: it corrects the page perspective before handing the image over, and
+  `RecognizeDocumentsRequest` reads a flat page far better than a trapezoid one. Multi-page,
+  edge detection and the torch come with it. The cost is that the chrome is Apple's rather
+  than FRIDAY's glass; a bespoke capture UI is a drop-in replacement that would have to
+  re-earn the perspective correction.
+
+  Two seams here, both of which would have cost a debug cycle if guessed:
+
+  - **`perform(on: Data)` exists.** Stage 1's commit message says it does not. It matters
+    because a portrait photo is landscape pixels *plus* an EXIF tag, and
+    `UIImage(data:)?.cgImage` drops the tag and hands Vision a sideways page. `TextScanner`
+    takes `Data` for exactly this reason.
+  - **VisionKit's `apinotes` are wrong for this target.** They rename `didFailWithError:` to
+    `documentCameraViewController(_:didFailWith:)`. The compiler wants the unabbreviated
+    form, and the short one only *warns*, because the requirement is optional — so a scanner
+    failure would have had no handler at all. The header was not the authority; the compiler
+    was.
 
 ### D-18 is now probably unreachable — do not delete it, do not trust it
 
@@ -356,12 +433,36 @@ call, not the next session's.
    oversight — see D-46.
 2. **`LanguageEngine.reminders` is now unused** since the session registers no tools. Left in
    place because re-registering tools would need it.
-3. **Keyword routing has gaps.** "Do I have time for coffee?" routes to the clock.
-   One-line fixes in `Router` as they turn up.
+3. **Keyword routing has gaps.** ~~"Do I have time for coffee?" routes to the clock.~~ That
+   example is stale — it routes to chat, correctly, and has since the needles became
+   multi-word. The general point stands: an unanticipated phrasing falls through to chat, and
+   adding one is a one-line change in `Router`. A 34-case truth table now covers the routes;
+   extend it rather than testing by hand.
 4. **Free-account provisioning expires every 7 days.** The app stops launching until rebuilt.
 5. **D-18's overflow path is unverified** and probably unreachable in normal use — see the
    section above. Written, correct on inspection, never observed running.
-6. **`WeatherTool`, D-09 and the paid account** remain the three standing decisions.
+6. **Stage 2's scan has never run.** See §4. Builds, installs, launches, routes — never
+   actually read a page.
+7. **A temporary diagnostic is in the tree and must come out.**
+   `LanguageEngine.lastDiagnostic` and `streamProgress`, surfaced in `ContentView`'s footer,
+   marked TEMPORARY at every site. It exists because `LanguageEngineFailure.other` discards
+   `error.localizedDescription`, so five distinct faults — "Already responding", "Empty
+   reply", and the six `GenerationError` cases `classify` folds into `default` — reach the
+   user as one sentence and are recorded nowhere. Same treatment
+   `LiveActivityController.lastFailure` got in session 6: added to answer one question,
+   deleted once it has. Delete it once D-53 is confirmed on device.
+8. **`WeatherTool`, D-09 and the paid account** remain the three standing decisions.
+9. **Hindi is not possible for conversational turns, and this is a platform limit.** Measured
+   on 2026-08-15, not recalled: `SystemLanguageModel.supportedLanguages` returns 23
+   languages and Hindi is not among them — `supportsLocale(hi_IN)` is `false`. Independently,
+   `SpeechTranscriber.supportedLocales` returns 30 locales with **no** Hindi at all, so it
+   cannot even be transcribed. A Hindi TTS voice (`Lekha`, `hi-IN`) *is* installed, so the
+   only Hindi-capable layer is the one that speaks. What is achievable is the Swift-composed
+   half — `Router` needles and `Lookup`'s sentences are code, not model output, so the time,
+   date, device, calendar and reminder answers could be written in Hindi and spoken with
+   Lekha. Chat turns cannot. **Caveat, and it is D-09's caveat exactly:** this was measured
+   on the Mac, where Apple Intelligence is not enabled. Re-confirm on the iPhone before
+   building anything on it.
 
 ---
 
