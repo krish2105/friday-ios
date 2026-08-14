@@ -36,10 +36,10 @@ The tradeoff is real: the on-device model is tuned for utility, not world knowle
 | Layer | Framework |
 |---|---|
 | Speech to text | `SpeechAnalyzer` + `SpeechTranscriber` (iOS 26) |
-| Voice activity | `SpeechDetector` |
+| Voice activity | `AVAudioEngine` RMS (see Known limitations) |
 | Reasoning | `FoundationModels` → `SystemLanguageModel` |
 | Structured output | `@Generable` / `@Guide` macros |
-| Tool calling | `Tool` protocol |
+| Intent routing | Swift keyword matching (see Measured) |
 | Text to speech | `AVSpeechSynthesizer` |
 | UI | SwiftUI, Swift 6 strict concurrency |
 | Ambient UI | ActivityKit (Dynamic Island) |
@@ -102,11 +102,11 @@ On first launch the app checks model availability and reports clearly if Apple I
 |---|---|
 | Time | Current date and time, locale-aware |
 | Device | Battery, storage, connectivity, thermal state |
-| Weather | Current conditions via WeatherKit |
+| ~~Weather~~ | Written, **not registered** — WeatherKit needs a paid account |
 | Calendar | Read today's events, next event |
-| Reminders | Create reminders (confirms verbally first) |
+| Reminders | Staged only; a real button press commits the write |
 
-The model decides when a tool is needed. Tool names never appear in spoken output.
+**Swift decides when a tool is needed, not the model** — see Measured. Factual answers are composed in Swift so a number can never be paraphrased into a different one. Tool names never appear in spoken output.
 
 ---
 
@@ -129,6 +129,8 @@ Views observe engine state. Views never touch speech or model APIs directly.
 **Limited world knowledge.** The on-device model is roughly 3B parameters and tuned for summarisation, classification, and extraction — not factual recall. Anything requiring current or specific facts goes through a tool.
 
 **Device gated.** iPhone 14 and older cannot run Foundation Models. The app detects this and explains it rather than failing silently.
+
+**No `SpeechDetector`.** Voice activity comes from `AVAudioEngine` RMS instead. `SpeechDetector` did not conform to `SpeechModule` when this was written — an Apple bug, since fixed — and push-to-talk governs the turn regardless.
 
 **Voice quality depends on a manual download.** Siri's voices are not available to third-party apps through `AVSpeechSynthesizer` — an Apple restriction, not an implementation gap. The best obtainable are the Premium and Enhanced system voices, each a 100 MB+ download the user installs from Settings → Accessibility → Live Speech → Voices. There is no API to offer those downloads in-app, so FRIDAY picks the best voice already present and tells you where to find better ones. On a device with only Standard voices she sounds noticeably more synthetic.
 
