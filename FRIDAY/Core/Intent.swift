@@ -42,6 +42,8 @@ enum Intent: Equatable {
     /// Read whatever he's about to show me. Nothing to look up here — the image
     /// comes from the UI, so `FridayEngine.scan` does the work.
     case scan(source: ScanSource, purpose: ScanPurpose = .read)
+    /// "What's that sound." Listens for a few seconds and names it.
+    case listen
     /// Nothing to look up — hand it to the model.
     case chat
 }
@@ -166,6 +168,23 @@ enum Router {
 
         if let motion = motionRequest(in: text) {
             return .motion(aspect: motion.aspect, dayOffset: motion.dayOffset)
+        }
+
+        // Before the scan needles, because "what's that" is the opening of both
+        // "what's that sound" and "what's that say" — and the sound words are
+        // the specific ones. Checked after, the scanner would go up and the
+        // microphone never would.
+        //
+        // "Noise" and "sound" both need a demonstrative or a hearing verb, or
+        // "make less noise" and "turn the sound up" would start listening.
+        if contains(text, ["what's that sound", "whats that sound", "what is that sound",
+                           "what's that noise", "whats that noise", "what is that noise",
+                           "what's that beeping", "whats that beeping",
+                           "what am i hearing", "what do you hear", "what can you hear",
+                           "identify this sound", "identify that sound",
+                           "what's making that", "whats making that",
+                           "listen to that", "listen to this", "what's that ringing"]) {
+            return .listen
         }
 
         // Every needle carries a demonstrative — "this", "that", "it". A bare
@@ -728,6 +747,14 @@ enum Lookup {
                 // and an App Intent has no way to put a picker up — the same
                 // shape of limit as the reminder case above.
                 return "I'd need to see it, boss. Open FRIDAY and show me."
+
+            case .listen:
+                // Only Siri arrives here, and it must not try: Siri already owns
+                // the microphone at that moment, so opening a second capture
+                // path would fight it for the input node. Same rule the whole
+                // `FridayAnswer` path follows — an App Intent never touches
+                // audio.
+                return "I'll need to listen for that, boss. Open FRIDAY and ask me again."
 
             case .chat:
                 return ""

@@ -199,6 +199,11 @@ final class FridayEngine {
     let notifier = FridayNotifier()
     let language: LanguageEngine
     let translator = Translator()
+
+    /// The other ear — sounds rather than speech. Never runs at the same time as
+    /// `speech`: both want the input node, and `state == .idle` is what keeps
+    /// them apart.
+    let ears = SoundListener()
     let liveActivity = LiveActivityController()
     let timerActivity = TimerActivityController()
 
@@ -429,6 +434,11 @@ final class FridayEngine {
             conversation[replyIndex].tone = set ? "calm" : "concerned"
             Haptics.replyReceived()
             await deliver(conversation[replyIndex].text)
+            return
+        }
+
+        if case .listen = intent {
+            await listenForSound(at: replyIndex)
             return
         }
 
@@ -872,6 +882,66 @@ final class FridayEngine {
         }
 
         await present(scanned: text)
+    }
+
+    /// Listens to the room for a few seconds and names what it heard.
+    ///
+    /// The reply arrives in two parts on purpose. FRIDAY says she is listening
+    /// *before* the window opens, because twelve seconds of a silent screen is
+    /// indistinguishable from a hang — and this app has shipped one of those
+    /// already (HANDOVER §7). The line is replaced in place when she is done.
+    ///
+    /// Composed in Swift, never by the model (D-44). What was heard is a
+    /// measurement with a confidence attached, and a 3B model handed
+    /// "dog_bark 0.41" would happily upgrade it to a certainty.
+    private func listenForSound(at replyIndex: Int) async {
+        // The talk button and this share one microphone, so the listen cannot
+        // start while she is still speaking her own line into it.
+        voice.stop()
+
+        conversation[replyIndex].text = await voiced("Listening, boss — give me a few seconds.",
+                                                     factual: false)
+        conversation[replyIndex].tone = "calm"
+
+        // Bounded past its own window, like every long path here. The listener
+        // stops itself after `SoundListener.window`; this is the backstop for a
+        // microphone that never yields a buffer at all, which would otherwise
+        // strand `.thinking` and leave a dead app.
+        let heard: [SoundListener.Heard] = await withDeadline(
+            seconds: SoundListener.window + 8
+        ) { [weak self] () async -> [SoundListener.Heard]? in
+            guard let self else { return nil }
+            return await self.ears.listen()
+        } ?? []
+
+        let line = Self.sentence(forHeard: heard)
+        conversation[replyIndex].text = await voiced(line, factual: true)
+        conversation[replyIndex].tone = heard.isEmpty ? "concerned" : "calm"
+        Haptics.replyReceived()
+        await deliver(conversation[replyIndex].text)
+    }
+
+    /// What she says about what she heard.
+    ///
+    /// A second guess is offered only when it is genuinely close to the first —
+    /// within three quarters of its confidence. Listing every candidate would
+    /// turn a confident answer into a hedge, and hedging on all three is how an
+    /// assistant stops being worth asking.
+    static func sentence(forHeard heard: [SoundListener.Heard]) -> String {
+        guard let best = heard.first else {
+            return "Nothing I can put a name to, boss. Too quiet, or nothing I know."
+        }
+
+        let confident = best.confidence >= 0.6
+        let opening = confident ? "That's" : "Sounds like"
+
+        guard let second = heard.dropFirst().first,
+              second.confidence >= best.confidence * 0.75
+        else {
+            return "\(opening) \(best.spoken), boss."
+        }
+
+        return "\(opening) \(best.spoken), boss — could be \(second.spoken)."
     }
 
     /// A page read in one language and shown in another.

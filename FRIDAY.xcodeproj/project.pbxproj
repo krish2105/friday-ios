@@ -86,6 +86,7 @@
 		AA0000000000000000000915 /* SightTranslator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000914 /* SightTranslator.swift */; };
 		AA0000000000000000000917 /* DocumentStructure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000916 /* DocumentStructure.swift */; };
 		AA0000000000000000000918 /* DocumentStructure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000916 /* DocumentStructure.swift */; };
+		AA0000000000000000000920 /* SoundListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000919 /* SoundListener.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -197,6 +198,7 @@
 		AA0000000000000000000731 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA0000000000000000000914 /* SightTranslator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SightTranslator.swift; sourceTree = "<group>"; };
 		AA0000000000000000000916 /* DocumentStructure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentStructure.swift; sourceTree = "<group>"; };
+		AA0000000000000000000919 /* SoundListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundListener.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -313,6 +315,7 @@
 			children = (
 				AA000000000000000000070A /* AudioSessionManager.swift */,
 				AA0000000000000000000714 /* SpeechInput.swift */,
+				AA0000000000000000000919 /* SoundListener.swift */,
 				AA0000000000000000000715 /* SpeechOutput.swift */,
 			);
 			path = Speech;
@@ -599,6 +602,7 @@
 				AA0000000000000000000808 /* GlassSurface.swift in Sources */,
 				AA000000000000000000080A /* AudioSessionManager.swift in Sources */,
 				AA0000000000000000000814 /* SpeechInput.swift in Sources */,
+				AA0000000000000000000920 /* SoundListener.swift in Sources */,
 				AA0000000000000000000815 /* SpeechOutput.swift in Sources */,
 				AA0000000000000000000816 /* SettingsView.swift in Sources */,
 				AA0000000000000000000817 /* FridayTool.swift in Sources */,
@@ -733,7 +737,7 @@
 				INFOPLIST_KEY_NSMotionUsageDescription = "FRIDAY reads your step count when you ask how far you have walked.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "FRIDAY reads documents you point the camera at. Recognition happens on-device.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FRIDAY uses your location for local weather.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FRIDAY listens for your voice commands.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FRIDAY listens for your voice commands, and for sounds around you when you ask what one is. Audio is analysed on-device and never leaves your phone.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "FRIDAY creates reminders when you ask.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "FRIDAY transcribes your speech on-device.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
@@ -774,7 +778,7 @@
 				INFOPLIST_KEY_NSMotionUsageDescription = "FRIDAY reads your step count when you ask how far you have walked.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "FRIDAY reads documents you point the camera at. Recognition happens on-device.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FRIDAY uses your location for local weather.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FRIDAY listens for your voice commands.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FRIDAY listens for your voice commands, and for sounds around you when you ask what one is. Audio is analysed on-device and never leaves your phone.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "FRIDAY creates reminders when you ask.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "FRIDAY transcribes your speech on-device.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
