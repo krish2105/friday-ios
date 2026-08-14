@@ -15,6 +15,15 @@ struct ContentView: View {
     private var isListening: Bool { engine.state == .listening }
     private var isThinking: Bool { engine.state == .thinking }
 
+    /// Anything other than resting. Drives the ambient field's motion, which is
+    /// held still at rest so Liquid Glass can cache its backdrop.
+    private var isBusy: Bool {
+        switch engine.state {
+        case .listening, .thinking, .speaking: true
+        case .idle, .error: false
+        }
+    }
+
     /// Ambient accent follows FRIDAY's mood once she's said something.
     private var accent: Color {
         if isListening { return FridayTheme.amber }
@@ -92,7 +101,7 @@ struct ContentView: View {
         // `.background` is proposed the primary view's size and can never grow
         // it, so this cannot regress. Capping the blobs inside AmbientBackground
         // was not enough; the containment has to be here.
-        .background { AmbientBackground(accent: accent) }
+        .background { AmbientBackground(accent: accent, isAnimating: isBusy) }
         .onAppear {
             appeared = true
             pulsing = true
@@ -159,7 +168,10 @@ struct ContentView: View {
             Circle()
                 .fill(status.accent)
                 .frame(width: 6, height: 6)
-                .shadow(color: status.accent.opacity(0.9), radius: pulsing ? 6 : 2)
+                // Static shadow. Animating `radius` re-rasterises the blur every
+                // frame, forever, for a 6pt dot nobody is looking at. The scale
+                // pulse below is a transform and costs nothing.
+                .shadow(color: status.accent.opacity(0.9), radius: 3)
                 .scaleEffect(pulsing ? 1.2 : 0.9)
                 .animation(
                     reduceMotion ? nil : .easeInOut(duration: 1.7).repeatForever(autoreverses: true),

@@ -7,6 +7,20 @@ import SwiftUI
 struct AmbientBackground: View {
     var accent: Color
 
+    /// Drift only while FRIDAY is actually doing something.
+    ///
+    /// Measured on device: idle CPU was 8% in a Release build against a <5%
+    /// budget, with the orb already innocent — no `Canvas` exists at idle
+    /// (D-38). The cost is this view meeting Liquid Glass. Three glass surfaces
+    /// sit on top of it, and glass re-samples its backdrop every frame; while
+    /// these blobs drift, that backdrop never stops moving, so the blur can
+    /// never be cached. D-38 budgeted the orb and never accounted for the
+    /// interaction.
+    ///
+    /// Holding still at rest costs nothing visually — the field is slow enough
+    /// that it reads as static anyway — and it lets the compositor cache.
+    var isAnimating: Bool
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var drift = false
 
@@ -38,7 +52,16 @@ struct AmbientBackground: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.9), value: accent)
-        .onAppear(perform: startDrift)
+        .onAppear { if isAnimating { startDrift() } }
+        .onChange(of: isAnimating) { _, active in
+            active ? startDrift() : stopDrift()
+        }
+    }
+
+    /// A finite animation replaces the `repeatForever` one, which is the only
+    /// way to actually stop it.
+    private func stopDrift() {
+        withAnimation(.easeInOut(duration: 0.8)) { drift = false }
     }
 
     private func blob(_ color: Color, size: CGFloat) -> some View {
