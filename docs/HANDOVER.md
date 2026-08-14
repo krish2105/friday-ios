@@ -1,6 +1,6 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-09, D-45, D-52, D-53–D-69, §10)
+**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§2, §3, §4, D-09, D-45, D-52, D-53–D-70, §10)
 **Repo state:** `main`, stage 3 landed at `15bca6f` · **Commits:** 47
 
 This replaces the previous handover, which was written by a cloud session with no Swift
@@ -41,7 +41,7 @@ nowhere near sufficient.
 | Language | Swift 6.0, `SWIFT_STRICT_CONCURRENCY = complete` |
 | Test device | iPhone 16 Pro (`iPhone17,1`), iOS 26.6, name `KM` |
 | Signing | Personal Team `R9BD597ST6`, free account — profiles expire after 7 days |
-| Targets | **Two** — the app and the `FridayActivity` widget extension |
+| Targets | **Three** — the app, the `FridayActivity` widget extension, the `FridayShare` share extension |
 
 ### Building from the command line
 
@@ -92,7 +92,7 @@ session was diagnosed this way in about a minute.
 
 ## 3. What is built
 
-61 Swift files across two targets.
+63 Swift files across **three** targets.
 
 | Dir | Files | Contents |
 |---|---|---|
@@ -108,6 +108,7 @@ session was diagnosed this way in about a minute.
 | `Language/` | 3 | `Bilingual`, `Translator`, `Tongues` |
 | `Notify/` | 1 | `FridayNotifier` |
 | `FridayActivity/` | 4 | `FridayActivityBundle` (`@main`), `FridayListenControl`, `FridayLockWidget`, `FridayStatusWidget` |
+| `FridayShare/` | 2 | `ShareViewController`, `SharedTextView` — plus `TextScanner` and `PDFReader`, shared source |
 
 ### Per-session status
 
@@ -867,6 +868,42 @@ The old §8 still stands except where noted. New decisions from device work:
 
   The palette is repeated in the extension rather than shared. `FridayTheme` lives in the app
   target and pulling it across would drag `AIStatus` and the rest with it, for four colours.
+
+- **D-70 · The share extension is self-contained, because it has to be.**
+
+  "Read with FRIDAY" appears in any app's share sheet for an image or a PDF, recognises the
+  text, and offers to copy it.
+
+  **It cannot hand anything to the app**, and that is the shape of the whole feature rather
+  than a limitation of it. An extension passes data to its host through an **App Group**,
+  which needs a paid membership and, added on a free account, risks provisioning outright —
+  the same wall as D-32 and D-52. So the extension does the work itself, and the result leaves
+  by **clipboard**, the one channel every app already shares. That also pairs with the app's
+  own clipboard reading from D-66: share here, then ask FRIDAY what's on your clipboard.
+
+  **`TextScanner` and `PDFReader` are compiled into both targets** — shared source rather than
+  copied text, so they cannot drift, but the extension does carry its own copy of the reading
+  path. That is the honest cost of no App Group.
+
+  **The model deliberately stays out.** Receipt, boarding-pass and business-card extraction
+  remain app-only. An extension runs under a far tighter memory limit than an app, and loading
+  a ~3B model inside one to save a round trip is how an extension gets killed mid-share — the
+  user sees it vanish with no error and nothing to retry.
+
+  Two implementation notes worth keeping:
+
+  - **PDFs are checked before images.** A PDF also conforms to `public.data`, so asking for
+    the image type first loads a document as bytes and fails.
+  - **The shared item is unwrapped inside the completion handler.** `NSSecureCoding` is not
+    `Sendable`, so returning it and casting afterwards does not compile — *"sending 'item'
+    risks causing data races"*. Third time this project has hit that shape, after `CNContact`
+    and `CMPedometerData`: take what you need where the callback lands, carry nothing else out.
+  - Images arrive as a `URL`, a `UIImage` **or** raw `Data` depending on which app did the
+    sharing, so all three are handled rather than the one that happened to be tested.
+
+  **The target was hand-written into `project.pbxproj`**, mirroring `FridayActivity`'s shape,
+  because D-04 keeps the file in `objectVersion = 56` by hand. `xcodebuild -list` confirming
+  three targets is the cheap check that the edit parsed before spending a build on it.
 
 ### D-18 is now probably unreachable — do not delete it, do not trust it
 
