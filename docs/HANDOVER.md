@@ -1,6 +1,6 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-09, D-45, D-53–D-63, §10)
+**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-09, D-45, D-53–D-64, §10)
 **Repo state:** `main`, stage 3 landed at `15bca6f` · **Commits:** 47
 
 This replaces the previous handover, which was written by a cloud session with no Swift
@@ -92,7 +92,7 @@ session was diagnosed this way in about a minute.
 
 ## 3. What is built
 
-56 Swift files across two targets.
+57 Swift files across two targets.
 
 | Dir | Files | Contents |
 |---|---|---|
@@ -101,7 +101,7 @@ session was diagnosed this way in about a minute.
 | `Intelligence/` | 3 | `Availability`, `Generables`, `LanguageEngine` |
 | `Speech/` | 3 | `AudioSessionManager`, `SpeechInput`, `SpeechOutput` |
 | `Tools/` | 8 | `FridayTool`, `TimeTool`, `DeviceTool`, `WeatherTool`, `CalendarTool`, `ReminderTool`, `ContactTool`, `MotionTool` |
-| `UI/` | 13 | `ContentView`, `ConversationView`, `OrbView`, `TalkButton`, `SettingsView`, `AmbientBackground`, `GlassSurface`, `FridayTheme`, `Haptics`, **`ActionSlot`**, **`InputBar`**, **`StatusHeader`**, **`CapabilitiesSheet`** |
+| `UI/` | 13 | `ContentView`, `ConversationView`, `OrbView`, `TalkButton`, `SettingsView`, `AmbientBackground`, `GlassSurface`, `FridayTheme`, `Haptics`, **`ActionSlot`**, **`InputBar`**, **`StatusHeader`**, **`CapabilitiesSheet`**, **`HeroPanel`** |
 | `LiveActivity/` | 3 | `FridayAttributes`, `LiveActivityController`, `FridayLiveActivity` |
 | `Intents/` | 3 | `AskFridayIntent` (+ `FridayAnswer`, `FridayShortcuts`), `StartListeningIntent`, `FridaySnippet` |
 | `Vision/` | 7 | `TextScanner`, `DocumentCamera`, `ReceiptReader`, `BoardingPassReader`, `BarcodeReader`, `LiveScanner`, `PDFReader` |
@@ -703,6 +703,40 @@ The old §8 still stands except where noted. New decisions from device work:
   **Outstanding acceptance criterion: Release idle CPU.** A Release build is installed and the
   number is unmeasured. If the redesign costs D-50's 2%, the stage is not done — that is the
   criterion that can fail it, and it is owner-measured because it needs Xcode's gauge.
+
+- **D-64 · The orb is the hero of the empty state, and suggestions replace the `+`.**
+
+  Stage 8's redesign was structural, and the owner's response to a screenshot was fair: *"it
+  looks the same."* It did. Three of its five changes are invisible until something is
+  happening, so the screen the app is looked at in most was the one that changed least.
+  Recorded because the lesson is not about glass — **a constraint that forbids motion at rest
+  will, left alone, produce a redesign you cannot see.**
+
+  Two things changed, chosen from three mocked-up directions:
+
+  - **The orb moved up and grew to 168pt as the empty state's focal point.** It is the one
+    element that *is* FRIDAY rather than a control, and it had been sitting below a text field
+    competing with it. It travels via `matchedGeometryEffect` rather than being replaced,
+    because an object that moves reads as the same object; one that vanishes and reappears
+    does not. `TravellingOrb` applies the effect conditionally through a `ViewModifier`, since
+    an inline `if let` yields two different view types and breaks the identity the effect
+    exists to preserve.
+  - **Five suggestion chips** fill what was ~55% dead space. This supersedes the action row's
+    role as the discoverability fix: a chip shows the phrase **and runs it**, so one tap
+    teaches the words for next time, where the `+` still required knowing to press it. The
+    `+` remains, but as the way to the camera actions rather than as the answer to *"what can
+    this thing do"*.
+
+  `FlowLayout` is a `Layout` conformance rather than a `LazyVGrid`, because equal columns
+  stretch "Read this" to the width of "How many steps have I done" and the set stops reading
+  as phrases and starts reading as a form.
+
+  **The animation budget is one spring**, firing exactly twice in a conversation's life — when
+  the first turn arrives and the orb travels down, and if the transcript is ever cleared.
+  Nothing added here runs at rest, so D-50 holds by construction rather than by hope.
+
+  **Still unmeasured: Release idle CPU.** The hero puts the orb in the ambient field's
+  brightest region, which is precisely where glass re-sampling was expensive at 8%.
 
 ### D-18 is now probably unreachable — do not delete it, do not trust it
 

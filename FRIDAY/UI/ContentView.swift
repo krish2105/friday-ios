@@ -15,6 +15,14 @@ struct ContentView: View {
     @State private var showCapabilities = false
     @State private var picked: PhotosPickerItem?
 
+    /// Lets the orb travel between the hero layout and the compact one.
+    @Namespace private var orbSpace
+
+    /// The hero owns the screen only while there is nothing to show. The
+    /// moment a conversation exists it needs the room, so the orb shrinks and
+    /// moves down rather than holding the middle of the display.
+    private var isEmpty: Bool { engine.conversation.isEmpty }
+
     private var status: AIStatus { availability.status }
     private var isListening: Bool { engine.state == .listening }
     private var isThinking: Bool { engine.state == .thinking }
@@ -56,14 +64,27 @@ struct ContentView: View {
                         .reveal(appeared, delay: 0.12)
                 }
 
-                ConversationView(
-                    turns: engine.conversation,
-                    streamingText: engine.streamsVisibly ? engine.language.partialSpoken : "",
-                    isThinking: isThinking
-                )
-                .frame(maxHeight: .infinity)
-                .padding(.top, 12)
-                .reveal(appeared, delay: 0.18)
+                if isEmpty {
+                    HeroPanel(
+                        state: engine.state,
+                        level: engine.speech.level,
+                        namespace: orbSpace,
+                        onPress: { Task { await engine.startListening() } },
+                        onRelease: { Task { await engine.stopListening() } },
+                        onSuggestion: { phrase in Task { await engine.submit(phrase) } }
+                    )
+                    .frame(maxHeight: .infinity)
+                    .reveal(appeared, delay: 0.18)
+                } else {
+                    ConversationView(
+                        turns: engine.conversation,
+                        streamingText: engine.streamsVisibly ? engine.language.partialSpoken : "",
+                        isThinking: isThinking
+                    )
+                    .frame(maxHeight: .infinity)
+                    .padding(.top, 12)
+                    .reveal(appeared, delay: 0.18)
+                }
 
                 StatusStrip(
                     assetState: engine.speech.assetState,
@@ -94,8 +115,12 @@ struct ContentView: View {
                         )
                         .reveal(appeared, delay: 0.26)
 
-                        talkSection
-                            .reveal(appeared, delay: 0.32)
+                        // Only once the hero has handed the orb back. Two orbs
+                        // on screen would both claim the same matched geometry.
+                        if !isEmpty {
+                            talkSection
+                                .reveal(appeared, delay: 0.32)
+                        }
                     }
                 }
 
@@ -119,6 +144,13 @@ struct ContentView: View {
         // it, so this cannot regress. Capping the blobs inside AmbientBackground
         // was not enough; the containment has to be here.
         .background { AmbientBackground(accent: accent, isAnimating: isBusy) }
+        // The one animation this layout adds, and it fires exactly twice in a
+        // conversation's life: when the first turn arrives and the orb travels
+        // down, and if the transcript is ever emptied. Nothing here runs at rest.
+        .animation(
+            reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.82),
+            value: isEmpty
+        )
         .onAppear {
             appeared = true
             pulsing = true
@@ -254,6 +286,7 @@ struct ContentView: View {
             TalkButton(
                 state: engine.state,
                 level: engine.speech.level,
+                namespace: orbSpace,
                 onPress: { Task { await engine.startListening() } },
                 onRelease: { Task { await engine.stopListening() } }
             )
