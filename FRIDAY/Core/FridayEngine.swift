@@ -193,38 +193,7 @@ final class FridayEngine {
     /// the worst failure an assistant has. Composing in Swift means the value
     /// is always right and "boss" is always present.
     private func lookup(_ intent: Intent) async -> String {
-        do {
-            switch intent {
-            case .time(let includeDate):
-                return Self.addressed(try await TimeTool().call(arguments: .init(includeDate: includeDate)))
-
-            case .device(let aspect):
-                return Self.addressed(try await DeviceTool().call(arguments: .init(aspect: aspect)))
-
-            case .calendar(let day):
-                return Self.addressed(try await CalendarTool().call(arguments: .init(day: day, nextOnly: false)))
-
-            case .reminder(let title, let when):
-                // Staging only — D-34. The write still needs the Add it button.
-                reminders.stage(title: title, when: when)
-                guard let pending = reminders.pending else {
-                    return "I didn't catch what to remind you about, boss."
-                }
-                return "That's \(pending.title), \(pending.spokenWhen), boss. Say the word and I'll add it."
-
-            case .chat:
-                return ""
-            }
-        } catch {
-            return "Couldn't get that one, boss. Say the word and I'll try again."
-        }
-    }
-
-    /// Tools return plain factual sentences; FRIDAY always addresses him.
-    private static func addressed(_ sentence: String) -> String {
-        let text = sentence.trimmingCharacters(in: .whitespaces)
-        guard !text.lowercased().contains("boss") else { return text }
-        return text.hasSuffix(".") ? String(text.dropLast()) + ", boss." : text + ", boss."
+        await Lookup.answer(for: intent, reminders: reminders)
     }
 
     /// Runs a turn but gives up on it after 20 seconds.

@@ -85,3 +85,51 @@ enum Router {
         return title.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
+
+/// Runs the tool a routed turn asked for and writes the sentence.
+///
+/// Shared by `FridayEngine` and `AskFridayIntent`. The intent cannot go through
+/// the engine: the engine owns `AVAudioEngine` and the audio session, and an
+/// App Intent answering Siri must never touch either.
+///
+/// The model never sees these strings. It echoed `TimeTool`'s output word for
+/// word on device, and a 3B model paraphrasing a number can quietly change it —
+/// the worst failure an assistant has. Composing here means the value is always
+/// right and "boss" is always present.
+@MainActor
+enum Lookup {
+    static func answer(for intent: Intent, reminders: ReminderService) async -> String {
+        do {
+            switch intent {
+            case .time(let includeDate):
+                return addressed(try await TimeTool().call(arguments: .init(includeDate: includeDate)))
+
+            case .device(let aspect):
+                return addressed(try await DeviceTool().call(arguments: .init(aspect: aspect)))
+
+            case .calendar(let day):
+                return addressed(try await CalendarTool().call(arguments: .init(day: day, nextOnly: false)))
+
+            case .reminder(let title, let when):
+                // Staging only — D-34. The write still needs the Add it button.
+                reminders.stage(title: title, when: when)
+                guard let pending = reminders.pending else {
+                    return "I didn't catch what to remind you about, boss."
+                }
+                return "That's \(pending.title), \(pending.spokenWhen), boss. Say the word and I'll add it."
+
+            case .chat:
+                return ""
+            }
+        } catch {
+            return "Couldn't get that one, boss. Say the word and I'll try again."
+        }
+    }
+
+    /// Tools return plain factual sentences; FRIDAY always addresses him.
+    static func addressed(_ sentence: String) -> String {
+        let text = sentence.trimmingCharacters(in: .whitespaces)
+        guard !text.lowercased().contains("boss") else { return text }
+        return text.hasSuffix(".") ? String(text.dropLast()) + ", boss." : text + ", boss."
+    }
+}
