@@ -54,7 +54,34 @@ struct OrbView: View {
         .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: level)
         .animation(.easeInOut(duration: 0.3), value: isActive)
         .animation(.easeInOut(duration: 0.3), value: accent)
-        .onAppear { breathing = true }
+        .onChange(of: isActive) { _, active in
+            active ? startBreathing() : stopBreathing()
+        }
+    }
+
+    /// The orb holds still at rest.
+    ///
+    /// Master Build §12 asks for a slow breathing pulse while idle, and it was
+    /// built that way — but measured on device it cannot coexist with D-31's
+    /// Liquid Glass inside a sub-5% budget. `TalkButton` wraps this view in
+    /// `.glassEffect`, and glass re-samples whatever sits beneath it every
+    /// frame, so an orb that never stops moving means glass that never stops
+    /// re-blurring. Release idle was 8%, then 6% once the ambient field was
+    /// held still, with this the last continuous animation left.
+    ///
+    /// Owner's call: keep the interactive glass, freeze the resting orb. Motion
+    /// now belongs to the active states, where `ActiveOrbCanvas` already
+    /// provides it and the CPU cost is expected.
+    private func startBreathing() {
+        guard !reduceMotion else { return }
+        withAnimation(.easeInOut(duration: 2.6).repeatForever(autoreverses: true)) {
+            breathing = true
+        }
+    }
+
+    /// A finite animation is the only thing that stops a `repeatForever` one.
+    private func stopBreathing() {
+        withAnimation(.easeInOut(duration: 0.5)) { breathing = false }
     }
 
     private var listeningScale: CGFloat {
@@ -77,13 +104,10 @@ struct OrbView: View {
             Circle()
                 .strokeBorder(accent.opacity(0.5), lineWidth: 1.5)
         }
-        // A single implicit repeatForever — no per-frame CPU work.
-        .scaleEffect(breathing && !reduceMotion ? 1.0 : 0.94)
-        .opacity(breathing && !reduceMotion ? 1.0 : 0.82)
-        .animation(
-            reduceMotion ? nil : .easeInOut(duration: 2.6).repeatForever(autoreverses: true),
-            value: breathing
-        )
+        // Driven by start/stopBreathing above, not by a standing animation, so
+        // that at rest this is a static layer the compositor can cache.
+        .scaleEffect(breathing ? 1.0 : 0.96)
+        .opacity(breathing ? 1.0 : 0.88)
     }
 }
 
