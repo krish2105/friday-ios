@@ -302,8 +302,26 @@ final class FridayEngine {
         }
 
         if case .chat = intent {} else {
+            // Bounded, like every other long path — and this one was the
+            // exception. A tool has no timeout of its own: `CMPedometer`,
+            // `EKEventStore` and `CNContactStore` all sit behind callbacks that
+            // are *not obliged to fire*, and the first motion query raises a
+            // permission prompt whose handler may never arrive. An unresumed
+            // continuation is not cancellable, so the turn strands in
+            // `.thinking` and the talk button's `state == .idle` guard makes the
+            // app unusable until it is relaunched (HANDOVER §7).
+            //
+            // Twelve seconds: a lookup that takes longer has failed, whatever it
+            // says it is doing.
+            let looked = await withDeadline(seconds: 12) { [weak self] in
+                await self?.lookup(intent)
+            }
+
             // `factual: true` — these carry the numbers D-44 exists to protect.
-            let answer = await voiced(await lookup(intent), factual: true)
+            let answer = await voiced(
+                looked ?? "That one's not answering, boss. Give it another go.",
+                factual: true
+            )
             conversation[replyIndex].text = answer
             conversation[replyIndex].tone = "calm"
             Haptics.replyReceived()

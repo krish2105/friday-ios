@@ -18,7 +18,8 @@ struct ConversationView: View {
                     ForEach(Array(turns.enumerated()), id: \.element.id) { index, turn in
                         TurnBubble(
                             turn: turn,
-                            displayText: text(for: turn, isLast: index == turns.count - 1)
+                            displayText: text(for: turn, isLast: index == turns.count - 1),
+                            isAwaiting: isAwaiting(turn, isLast: index == turns.count - 1)
                         )
                         .id(turn.id)
                     }
@@ -43,7 +44,16 @@ struct ConversationView: View {
         guard turn.isFriday, turn.text.isEmpty, isLast, isThinking else {
             return turn.text
         }
-        return streamingText.isEmpty ? "…" : streamingText
+        return streamingText
+    }
+
+    /// Whether this turn is the one being waited on.
+    ///
+    /// It used to render a literal "…" in a bubble, which at one character wide
+    /// collapsed into a small square that read as a broken element rather than
+    /// as waiting. A turn with nothing in it yet needs a *shape*, not a glyph.
+    private func isAwaiting(_ turn: ConversationTurn, isLast: Bool) -> Bool {
+        turn.isFriday && turn.text.isEmpty && isLast && isThinking && streamingText.isEmpty
     }
 
     private func scrollToEnd(_ proxy: ScrollViewProxy) {
@@ -58,6 +68,7 @@ struct ConversationView: View {
 private struct TurnBubble: View {
     var turn: ConversationTurn
     var displayText: String
+    var isAwaiting = false
 
     private var tone: FridayTone { FridayTone(turn.tone) }
 
@@ -75,7 +86,9 @@ private struct TurnBubble: View {
 
     @ViewBuilder
     private var bubble: some View {
-        if turn.kind == .quoted {
+        if isAwaiting {
+            ThinkingDots(tint: tone.color)
+        } else if turn.kind == .quoted {
             quotation
         } else {
             speech
@@ -128,5 +141,51 @@ private struct TurnBubble: View {
         .padding(.vertical, 4)
         .accessibilityLabel("Text read from the page")
         .accessibilityValue(displayText)
+    }
+}
+
+/// Three dots, breathing, while a turn has nothing to show yet.
+///
+/// The animation is fine here and would not be at rest: this only exists while
+/// the engine is in `.thinking`, which is an active state the user is watching.
+/// D-50's rule is that *idle* costs nothing — not that nothing may ever move.
+private struct ThinkingDots: View {
+    var tint: Color
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var lifted = false
+
+    var body: some View {
+        HStack(spacing: 5) {
+            ForEach(0..<3, id: \.self) { index in
+                Circle()
+                    .fill(tint.opacity(0.75))
+                    .frame(width: 7, height: 7)
+                    .scaleEffect(lifted ? 1 : 0.55)
+                    .animation(
+                        reduceMotion
+                            ? nil
+                            // Staggered by 150ms so it reads as a wave rather
+                            // than a flash, which is the difference between
+                            // "thinking" and "loading".
+                            : .easeInOut(duration: 0.55)
+                                .repeatForever(autoreverses: true)
+                                .delay(Double(index) * 0.15),
+                        value: lifted
+                    )
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(tint.opacity(0.11))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(tint.opacity(0.34), lineWidth: 1)
+        )
+        .onAppear { lifted = true }
+        .accessibilityLabel("FRIDAY is thinking")
     }
 }

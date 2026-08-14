@@ -46,6 +46,21 @@ struct CalendarTool: Tool {
             if let next = events.first { events = [next] } else { events = [] }
         }
 
+        // Subscribed calendars overlap, and EventKit reports each copy as a
+        // separate event because to it they *are* separate. A public holiday
+        // carried by four subscribed calendars produced "Independence Day, all
+        // day; Independence Day, all day; Independence Day, all day;
+        // Independence Day, all day" on device — technically correct and
+        // useless.
+        //
+        // Deduplicated on what a person would call the same event: the same
+        // title, starting at the same moment.
+        var seen: Set<String> = []
+        events = events.filter { event in
+            let key = "\(event.title ?? "")|\(event.startDate.timeIntervalSince1970)"
+            return seen.insert(key).inserted
+        }
+
         guard !events.isEmpty else {
             return "Nothing on the calendar for \(Self.label(for: day, calendar: calendar))."
         }
