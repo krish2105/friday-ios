@@ -94,16 +94,31 @@ final class LanguageEngine {
     // *constant* perfectly well, so `instructions: FridayPersona.instructions`
     // would also have compiled. The builder form is kept because it is the
     // non-disfavoured overload and reads better — not because it was required.
+    /// Whether `WeatherTool` is worth registering.
+    ///
+    /// `false` because WeatherKit needs a paid developer account (D-32) and the
+    /// owner is on a free one, so every `currentWeather` call is guaranteed to
+    /// fail — after spending a location fix first. Registering a tool that
+    /// cannot succeed is pure cost: it takes schema tokens from the ~4,096
+    /// budget it shares with the persona and the conversation (D-36), and on
+    /// device the model routed "what can you do" to it and wedged the turn.
+    ///
+    /// This does not reverse D-32, it follows it. `WeatherTool` is untouched;
+    /// flip this the day the account is upgraded and the capability is enabled.
+    private static let weatherIsUsable = false
+
     private static func makeSession(reminders: ReminderService) -> LanguageModelSession {
-        LanguageModelSession(
-            tools: [
-                TimeTool(),
-                DeviceTool(),
-                WeatherTool(),
-                CalendarTool(),
-                ReminderTool(service: reminders)
-            ]
-        ) {
+        var tools: [any Tool] = [
+            TimeTool(),
+            DeviceTool(),
+            CalendarTool(),
+            ReminderTool(service: reminders)
+        ]
+        if weatherIsUsable {
+            tools.append(WeatherTool())
+        }
+
+        return LanguageModelSession(tools: tools) {
             FridayPersona.instructions
         }
     }

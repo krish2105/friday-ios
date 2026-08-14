@@ -23,7 +23,7 @@ private final class LocationFix: NSObject, CLLocationManagerDelegate, @unchecked
             // cancellable, so no deadline further up the stack can rescue it.
             // `settle` nils the continuation before resuming, so whichever of
             // this and a real callback lands first wins and the other no-ops.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
                 self?.settle(nil)
             }
         }
