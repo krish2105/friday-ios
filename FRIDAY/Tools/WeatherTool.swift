@@ -13,6 +13,19 @@ private final class LocationFix: NSObject, CLLocationManagerDelegate, @unchecked
             manager.delegate = self
             manager.requestWhenInUseAuthorization()
             manager.requestLocation()
+
+            // CoreLocation is not obliged to call back. Authorised but with no
+            // fix available, it can stay silent indefinitely, and none of the
+            // delegate methods below fire — so the continuation is never
+            // resumed and this tool hangs the model's turn forever.
+            //
+            // It has to be bounded HERE. An unresumed continuation is not
+            // cancellable, so no deadline further up the stack can rescue it.
+            // `settle` nils the continuation before resuming, so whichever of
+            // this and a real callback lands first wins and the other no-ops.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in
+                self?.settle(nil)
+            }
         }
     }
 
