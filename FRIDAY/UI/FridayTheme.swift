@@ -34,7 +34,11 @@ extension AIStatus {
     /// Short uppercase tag shown in the pill.
     var badge: String {
         switch self {
-        case .ready: "ON DEVICE MODEL"
+        // "ON DEVICE MODEL" no longer fits. Stage 8 added a second header
+        // button, which took ~44pt out of the row and left the chip truncating
+        // to "ON DEVICE MO…" — a label that has to be readable to mean anything.
+        // Shortened rather than scaled further: 9.5pt is already small.
+        case .ready: "ON DEVICE"
         case .modelDownloading: "DOWNLOADING"
         case .appleIntelligenceOff: "ACTION NEEDED"
         case .deviceNotEligible: "UNSUPPORTED"
