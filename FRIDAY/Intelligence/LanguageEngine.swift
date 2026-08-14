@@ -41,6 +41,26 @@ final class LanguageEngine {
     private(set) var partialSpoken = ""
     private(set) var isResponding = false
 
+    // MARK: - TEMPORARY DIAGNOSTIC
+    //
+    // Remove once the "taking too long" / "went sideways" pair is understood.
+    //
+    // It exists because `LanguageEngineFailure.other` carries
+    // `error.localizedDescription` and `spokenFallback` throws it away, so five
+    // distinct faults — "Already responding", "Empty reply", and the six
+    // `GenerationError` cases `classify` folds into `default` — all reach the
+    // user as one sentence and are recorded nowhere. Same shape as
+    // `LiveActivityController.lastFailure` (HANDOVER §8): added to answer one
+    // question, deleted once it has.
+
+    /// The real error behind the last failure, case name and all.
+    private(set) var lastDiagnostic: String?
+
+    /// How the in-flight turn is progressing. The 20s deadline lives in
+    /// `FridayEngine` and cannot otherwise tell whether it killed a wedged turn
+    /// or a working one — this is the difference between the two.
+    private(set) var streamProgress = ""
+
     private var session: LanguageModelSession
     private let model = SystemLanguageModel.default
 
@@ -51,25 +71,41 @@ final class LanguageEngine {
 
     private let reminders: ReminderService
 
-    /// Greedy sampling, always.
+    /// Seeded top-3 sampling. This replaces `.greedy`, and the reason is a
+    /// device failure, not a preference.
     ///
-    /// The default is random sampling, which on a ~3B model produces exactly
-    /// the failure seen on device: "what time is it" answered with "what's for
-    /// dinner". It samples a plausible-looking token early and then commits to
-    /// it. FRIDAY is a utility assistant, not a creative writer — the same
-    /// question should give the same answer, and a wrong-but-fluent reply is
-    /// the worst outcome here.
+    /// D-45 chose `.greedy` because unseeded random sampling answered "what
+    /// time is it" with "what's for dinner" — it samples a plausible-looking
+    /// token early and commits to it. FRIDAY is a utility assistant, not a
+    /// creative writer, so the same question should give the same answer.
     ///
-    /// This also makes the persona rules bind harder, since the model stops
-    /// exploring low-probability continuations that ignore them.
+    /// Both halves of that reasoning have since stopped holding:
     ///
-    /// No `maximumResponseTokens`. It was here as a backstop and it caused a
-    /// real failure: guided generation has to emit a COMPLETE structured value,
-    /// so a cap that lands mid-structure leaves `spoken` nil, `respond` throws
-    /// "Empty reply", and FRIDAY says "Something went sideways, boss" for what
-    /// was actually a perfectly good turn. The @Guide already asks for under
-    /// three sentences; that is the right place to bound length.
-    private static let generation = GenerationOptions(sampling: .greedy)
+    /// - **The failure it prevented is now structurally impossible.** Since the
+    ///   routing rewrite (D-43), "what time is it" is answered in Swift and
+    ///   never reaches the model at all. Only conversational turns get here.
+    /// - **Greedy is what caused the loop.** Argmax at every step is
+    ///   deterministic, so once the model enters a repetition cycle it re-picks
+    ///   the same tokens forever. Observed on device on 2026-08-15: "what
+    ///   languages do you know" produced the same run of language names over
+    ///   and over until the 20s deadline killed it, at which point FRIDAY said
+    ///   "That one's taking too long, boss" about a turn that was working
+    ///   exactly as instructed.
+    ///
+    /// `seed:` is what makes this a fix rather than a trade. Reproducibility
+    /// was D-45's actual requirement, and a pinned seed delivers it — the same
+    /// prompt gives the same reply — while `top: 3` keeps the model near the
+    /// argmax it would have taken anyway. Cycles still break, because within a
+    /// single generation the RNG state has advanced by the time the repeated
+    /// context comes round again, so the second visit does not draw the same
+    /// token as the first.
+    ///
+    /// Still no `maximumResponseTokens`, and D-45 is right about why: guided
+    /// generation has to emit a COMPLETE structured value, so a cap landing
+    /// mid-structure leaves `spoken` nil and the turn dies as "Empty reply".
+    /// `trimmedAtRepetition` bounds the output instead, in Swift, where a
+    /// partial answer can be kept rather than thrown away.
+    private static let generation = GenerationOptions(sampling: .random(top: 3, seed: 1))
 
     init(reminders: ReminderService) {
         self.reminders = reminders
@@ -137,6 +173,9 @@ final class LanguageEngine {
     /// because whatever the abandoned request left in it cannot be trusted.
     func abandonInFlight() {
         guard isResponding else { return }
+        // TEMPORARY DIAGNOSTIC. This is the important one: it says what the
+        // deadline actually killed.
+        lastDiagnostic = "deadline fired — \(streamProgress)"
         isResponding = false
         partialSpoken = ""
         resetPreservingPersona()
@@ -175,6 +214,11 @@ final class LanguageEngine {
         partialSpoken = ""
         defer { isResponding = false }
 
+        // TEMPORARY DIAGNOSTIC
+        let started = ContinuousClock.now
+        var chunks = 0
+        streamProgress = "no chunks yet"
+
         do {
             // Streaming yields `ResponseStream<FridayReply>.Snapshot`, NOT the
             // partial directly. `snapshot.content` is the
@@ -193,13 +237,35 @@ final class LanguageEngine {
                 if let text = snapshot.content.spoken {
                     spoken = text
                     partialSpoken = text
+
+                    // Stop the moment it starts going round in circles.
+                    //
+                    // Nothing downstream can do this. The model is producing
+                    // tokens happily, so `FridayEngine`'s 20s deadline sees a
+                    // perfectly healthy turn and kills it on the clock instead
+                    // of on the fault; and there is deliberately no token cap
+                    // (see `generation`) to run out. The bound has to be here,
+                    // where the text can be salvaged rather than discarded.
+                    if let salvaged = Self.trimmedAtRepetition(text) {
+                        spoken = salvaged
+                        partialSpoken = salvaged
+                        break
+                    }
                 }
                 if let mood = snapshot.content.tone {
                     tone = mood
                 }
+
+                // TEMPORARY DIAGNOSTIC. The elapsed time of the *last* chunk is
+                // the whole point: a turn still delivering chunks at 19s was
+                // long, not wedged, and the deadline killed working output.
+                chunks += 1
+                streamProgress = "\(chunks) chunks, \(spoken?.count ?? 0) chars, "
+                    + "last at \(Self.seconds(since: started))"
             }
 
             guard let spoken else {
+                lastDiagnostic = "Empty reply — \(streamProgress)"
                 throw LanguageEngineFailure.other("Empty reply")
             }
 
@@ -209,6 +275,12 @@ final class LanguageEngine {
 
         } catch let error as LanguageModelSession.GenerationError {
             let failure = Self.classify(error)
+
+            // TEMPORARY DIAGNOSTIC. `String(describing:)` gives the case name
+            // without a nine-case switch that would rot the moment Apple adds
+            // one; the description carries the framework's own wording.
+            lastDiagnostic = "\(Self.caseName(of: error)) — \(error.localizedDescription) "
+                + "[\(streamProgress)]"
 
             // Overflow is recoverable exactly once: reset, then retry the same
             // input on the fresh session so the turn isn't lost.
@@ -222,8 +294,56 @@ final class LanguageEngine {
         } catch let failure as LanguageEngineFailure {
             throw failure
         } catch {
+            // TEMPORARY DIAGNOSTIC
+            lastDiagnostic = "non-GenerationError \(type(of: error)) — "
+                + "\(error.localizedDescription) [\(streamProgress)]"
             throw LanguageEngineFailure.other(error.localizedDescription)
         }
+    }
+
+    // MARK: - TEMPORARY DIAGNOSTIC helpers
+
+    private static func caseName(of error: LanguageModelSession.GenerationError) -> String {
+        String(describing: error).prefix { $0 != "(" }.description
+    }
+
+    private static func seconds(since start: ContinuousClock.Instant) -> String {
+        let elapsed = ContinuousClock.now - start
+        return String(format: "%.1fs", Double(elapsed.components.seconds)
+                      + Double(elapsed.components.attoseconds) / 1e18)
+    }
+
+    // MARK: - Repetition
+
+    /// Sixty characters is the window. Natural language does not repeat sixty
+    /// characters exactly by accident; a decoder stuck in a cycle repeats them
+    /// forever. Below three windows there isn't enough text to tell the two
+    /// apart, so short replies are never inspected.
+    private static let loopWindow = 60
+
+    /// The reply cut at the point it began repeating itself, or `nil` if it
+    /// never did.
+    ///
+    /// Everything before the first repeat is the part the model actually meant.
+    /// For the question that exposed this — "what languages do you know" — that
+    /// prefix is a perfectly good list of languages, so the turn is salvaged
+    /// instead of failed. Reporting a fault to the boss for an answer that was
+    /// sitting right there would be the worse outcome.
+    private static func trimmedAtRepetition(_ text: String) -> String? {
+        guard text.count >= loopWindow * 3 else { return nil }
+
+        let tail = text.suffix(loopWindow)
+        let head = text.dropLast(loopWindow)
+        guard let repeated = head.firstRange(of: tail) else { return nil }
+
+        let kept = text[text.startIndex..<repeated.lowerBound]
+
+        // Cut back to the last clause boundary so it can't end mid-word. Without
+        // this the reply is spoken aloud with a severed final word.
+        guard let boundary = kept.lastIndex(where: { ",;:".contains($0) }) else {
+            return String(kept).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return String(kept[..<boundary]) + "."
     }
 
     // MARK: - Error mapping
