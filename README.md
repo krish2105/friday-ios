@@ -18,12 +18,17 @@ real data, calls actual Swift code, and answers aloud — in airplane mode, on a
 the network stack switched off entirely.
 
 ```
-speech  →  SpeechAnalyzer  →  Router  →  Tool          →  reply  →  AVSpeechSynthesizer
-           on-device STT      Swift      Swift code        text      on-device TTS
-                                  ↘
-                                    Foundation Models    ← conversation only
-                                    on-device ~3B
+speech ─→ SpeechAnalyzer ─┐
+camera ─→ Vision OCR ─────┼─→ Router ──→ Swift tool ──────→ reply ─→ AVSpeechSynthesizer
+files  ─→ PDFKit ─────────┘   (Swift)        │                       on-device TTS
+                                             ├─→ model extracts,
+                                             │   Swift verifies      ← receipts, passes
+                                             └─→ Foundation Models   ← conversation only
+                                                 on-device ~3B
 ```
+
+Hindi sits either side of that, never inside it: typed Devanagari is translated to English
+before `Router` sees it, and the answer is translated back before she speaks.
 
 ---
 
@@ -86,13 +91,20 @@ works.** Only conversation degrades. Half the app stopped depending on the model
 | **Spoken replies** | `AVSpeechSynthesizer`, with barge-in — press the orb to cut her off |
 | **Time & date** | Locale and timezone aware |
 | **Device** | Battery, storage, connectivity, thermal state |
-| **Calendar** | Read today's or tomorrow's events |
-| **Reminders** | Staged only — a real button press commits the write |
-| **Document reading** | On-device OCR via Vision — *in progress* |
+| **Calendar** | Reads your day, and adds to it — staged behind a button |
+| **Reminders** | Staged only, and FRIDAY delivers the nudge herself, in her own words |
+| **Contacts** | *"call mom"* — matches nicknames and relationships, not just filed names |
+| **Steps** | Steps, distance, flights — via CoreMotion, no HealthKit needed |
+| **Reading things** | Camera, photos, PDFs or a live viewfinder → on-device OCR |
+| **Receipts & boarding passes** | Structured extraction, every field checked against the page |
+| **QR & barcodes** | Reads them; never opens anything without a press |
+| **Hindi** | Type in Hindi, hear Hindi back — on-device translation both ways |
+| **Translation** | 22 languages, spoken in a voice that can pronounce them |
 
-**Reminders never write on their own.** The model can only *stage* a reminder;
-`EKEventStore.save` is reachable solely from the **Add it** button. A 3B model misjudging a
-turn must never be able to put junk in someone's real Reminders.
+**Nothing consequential happens without a press.** Reminders, calendar entries, phone calls
+and opening a scanned link all *stage* first. `EKEventStore.save` is reachable solely from the
+**Add it** button. A 3B model misjudging a turn must never put junk in a real calendar, ring a
+real person, or follow a link off a sticker someone printed.
 
 ---
 
@@ -102,8 +114,9 @@ Three entry points. iOS does not permit a persistent background wake-word listen
 third-party apps — this app documents that constraint rather than faking it with background
 audio modes.
 
-- **Push-to-talk** — hold the orb
-- **Siri** — *"Hey Siri, ask FRIDAY"*, then your question
+- **Push-to-talk** — hold the orb, or just stop talking and she takes the turn
+- **Typing** — a first-class way in, not a debug affordance
+- **Siri** — *"Hey Siri, ask FRIDAY"*, then your question; the answer comes back as a card
 - **Control Centre & Lock Screen** — both open FRIDAY already listening
 
 > Siri cannot take the question in the same breath. App Intents permits only `AppEntity` and
@@ -120,7 +133,8 @@ audio modes.
 | Memory | ~21 MB |
 | Network calls | 0 |
 | Build | 0 errors, 0 warnings under `SWIFT_STRICT_CONCURRENCY = complete` |
-| Defects found on device | 16 — none catchable by the compiler |
+| Routing cases under test | 65, re-run on every change |
+| Defects found on device | 18 — none catchable by the compiler |
 
 Getting idle CPU from 8% to 2% meant discovering that **Liquid Glass re-samples anything
 animating beneath it**. Three continuous animations ran on a screen where nothing was
@@ -139,6 +153,10 @@ Including the failure modes, several by deliberately breaking things:
 - Airplane mode · phone call mid-transcription · ten-plus conversation turns
 - A wedged turn — bounded by a 20-second deadline, because a stuck state made the app
   unusable until relaunch
+- A model that would not stop talking — greedy decoding entered a repetition cycle and ran
+  until the deadline killed it
+- A PDF that hung the app — an unbounded `Text` measuring 5,400 characters inside a running
+  transition, killed by the scene-update watchdog
 
 ---
 
@@ -183,7 +201,20 @@ deliberate: predictable and wrong in obvious ways beats unpredictable and wrong 
 ways.
 
 **Conversations are ephemeral.** Nothing is written to disk — audio never leaves the phone and
-transcripts never touch storage.
+transcripts never touch storage. No spending history, no searchable scans; that is the trade
+for the privacy claim being absolute rather than qualified.
+
+**Hindi has to be typed, not spoken.** `SpeechTranscriber` supports 30 locales and **none** of
+them is Hindi — not a poor one, none. The language model does not support Hindi either
+(23 languages, Hindi absent), so translation wraps an English model on both sides. Romanised
+Hindi — *"kya haal hai"* — reads as English, because detection is by script: `NLLanguageRecognizer`
+identifies that phrase as Dutch, and *"mujhe kal subah yaad dilana"* as Indonesian at full
+confidence. A confidently wrong detector is worse than none.
+
+**Structured extraction fails quietly.** If a receipt prints its total on the line *below* the
+word TOTAL, the field is refused and the scan falls back to a plain summary. That is the right
+way round — a missed extraction costs a nicety, a wrong one misreports what you spent — but it
+means the feature can stop working without announcing it.
 
 **Voice quality needs a manual download.** Siri's voices are not available to third-party apps
 through `AVSpeechSynthesizer` — an Apple restriction. The best obtainable are the Premium and
@@ -203,6 +234,7 @@ Builds also expire every 7 days.
 | [`docs/PORTFOLIO.md`](docs/PORTFOLIO.md) | The engineering write-up — decisions, and the things that turned out to be wrong |
 | [`docs/HANDOVER.md`](docs/HANDOVER.md) | Current state, decision log, and how to build, deploy and debug this |
 | [`CLAUDE.md`](CLAUDE.md) | Project rules |
+| [`docs/superpowers/specs/`](docs/superpowers/specs/) | Design specs written before the code |
 
 ---
 
@@ -211,8 +243,11 @@ Builds also expire every 7 days.
 - [x] On-device speech, reasoning, tools, voice
 - [x] Live Activity, Dynamic Island, haptics
 - [x] App Intents, Siri, Control Centre, Lock Screen widget
-- [ ] Document reading — camera OCR and structured extraction
-- [ ] Contacts, richer Shortcuts actions, Apple Watch companion
+- [x] Document reading — camera, photos, PDFs, live viewfinder, QR codes
+- [x] Structured extraction — receipts and boarding passes, verified against the page
+- [x] Contacts, calendar writes, step counts, FRIDAY's own reminder notifications
+- [x] Hindi, and translation into 22 languages
+- [ ] Apple Watch companion, richer Shortcuts actions
 - [ ] Optional remote brain over LiveKit *(personal use, not App Store eligible)*
 
 ---

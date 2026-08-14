@@ -151,10 +151,8 @@ verified. Two spec items could not be met as written — see D-51 and D-52.
 (`TextScanner`, `RecognizeDocumentsRequest`), stage 2 (photo library and live camera entry
 points, routed through `Router`), stage 3 (`@Generable` receipt extraction — see D-57).
 
-Stages 1 and 2 were confirmed by the owner on the 16 Pro on 2026-08-15: the camera route
-scans a page and FRIDAY reads it back. D-53's repetition fix was confirmed in the same pass.
-**Stage 3 has not been run against a real receipt** — its Swift half passes 25 cases,
-including every way of getting the total wrong, but no receipt has been photographed.
+All three confirmed by the owner on the 16 Pro on 2026-08-15, along with stages 4–7 and the
+D-61 hang fix.
 
 ### Suggested next work
 
@@ -726,21 +724,12 @@ call, not the next session's.
    `.other` bug starts from zero again. The temporary diagnostic that found D-53 has been
    deleted (it did its job); if another one is needed, that shape works and took ten minutes.
 7. **`WeatherTool`, D-09 and the paid account** remain the three standing decisions.
-8. **Hindi is built but NOT verified on device.** See D-56. It compiles with zero warnings
-   and its two pure-text pieces pass 18 cases, but no Hindi has ever gone through the app:
-   the language pack is not downloaded on the build Mac, so the translator has never actually
-   run. Until someone downloads Hindi in Settings → Apps → Translate and types a Devanagari
-   sentence, this is compiled-only — per §1, that proves almost nothing. Latency is the first
-   thing to watch: two translation hops land on top of a turn that already races a 20s
-   deadline.
-9. **Stage 3 has never met a real receipt.** See D-57. Its Swift half — the heuristic and
-   the verification — passes 25 cases, but that half is only *half*: nothing has confirmed
-   the model returns copied values rather than reformatted ones on a genuine photographed
-   receipt. If extraction never fires, the most likely cause is the model reformatting the
-   total rather than copying it, and the diagnosis is to compare `Receipt.total` against the
-   `TextScanner` transcript. Rejection is the safe direction, so this fails quietly to the
-   ordinary summary — which also means it can be broken without looking broken.
-10. **Superseded — kept for the measurement.** Hindi conversational support. Measured
+8. **Extraction fails *quietly*.** Receipts and boarding passes fall back to the ordinary
+   summary whenever a gate declines, which is the safe direction and also means they can stop
+   working without looking broken. If extraction stops firing, compare the extracted field
+   against the `TextScanner` transcript — the likeliest cause is the model reformatting a
+   value rather than copying it.
+9. **Superseded — kept for the measurement.** Hindi conversational support. Measured
    on 2026-08-15, not recalled: `SystemLanguageModel.supportedLanguages` returns 23
    languages and Hindi is not among them — `supportsLocale(hi_IN)` is `false`. Independently,
    `SpeechTranscriber.supportedLocales` returns 30 locales with **no** Hindi at all, so it
