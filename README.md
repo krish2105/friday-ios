@@ -144,6 +144,13 @@ This mode is for personal use and is not App Store eligible, since it depends on
 
 ---
 
+## Engineering write-up
+
+The decisions, the things that turned out to be wrong, and what the device proved that the
+compiler could not: **[docs/PORTFOLIO.md](docs/PORTFOLIO.md)**.
+
+---
+
 ## Author
 
 Krishna Mathur — [krishnamathur-ai.vercel.app](https://krishnamathur-ai.vercel.app)
