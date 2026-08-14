@@ -276,7 +276,23 @@ final class SpeechInput {
             throw SpeechInputError.converterUnavailable
         }
 
-        input.installTap(onBus: 0, bufferSize: 4096, format: hardwareFormat) { buffer, _ in
+        // `@Sendable` is REQUIRED, and its absence was the second hard crash on
+        // device — same fault as `requestRecognitionAccess`, different site.
+        //
+        // `AVAudioNodeTapBlock` is not `NS_SWIFT_SENDABLE`, so without this the
+        // closure inherits `startCapture`'s @MainActor isolation. AVAudioEngine
+        // then calls it on its realtime audio queue and the Swift 6 runtime
+        // traps on the executor mismatch:
+        //
+        //     _dispatch_assert_queue_fail
+        //     _swift_task_checkIsolatedSwift
+        //     closure #1 in SpeechInput.startCapture(converting:into:)
+        //     AVAudioNodeTap::TapMessage::RealtimeMessenger_Perform()
+        //
+        // Marking it @Sendable is what the surrounding code always assumed —
+        // it is why the level and conversion helpers are static and why the
+        // MainActor hop below is explicit.
+        input.installTap(onBus: 0, bufferSize: 4096, format: hardwareFormat) { @Sendable buffer, _ in
             let measured = Self.normalisedLevel(of: buffer)
             Task { @MainActor [weak self] in
                 self?.apply(measured)
@@ -293,7 +309,9 @@ final class SpeechInput {
         isCapturing = true
     }
 
-    private static func convert(
+    // `nonisolated` because this is called from the @Sendable audio tap above,
+    // off the main actor. It is a pure function over its arguments.
+    nonisolated private static func convert(
         _ buffer: AVAudioPCMBuffer,
         using converter: AVAudioConverter,
         to format: AVAudioFormat
@@ -335,7 +353,9 @@ final class SpeechInput {
         level = newValue > level ? newValue : level * 0.75 + newValue * 0.25
     }
 
-    private static func normalisedLevel(of buffer: AVAudioPCMBuffer) -> Float {
+    // Also called from the @Sendable audio tap, so it cannot be main-actor
+    // isolated. Pure function over the buffer.
+    nonisolated private static func normalisedLevel(of buffer: AVAudioPCMBuffer) -> Float {
         guard let channels = buffer.floatChannelData else { return 0 }
         let frameCount = Int(buffer.frameLength)
         let channelCount = Int(buffer.format.channelCount)
