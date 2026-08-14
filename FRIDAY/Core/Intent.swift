@@ -28,6 +28,8 @@ enum Intent: Equatable {
     case nextBirthday
     /// Steps, distance or stairs. `dayOffset` is 0 for today, -1 for yesterday.
     case motion(aspect: MotionTool.Aspect, dayOffset: Int)
+    /// "How do you say ‹phrase› in ‹language›." `code` is a language code.
+    case translate(phrase: String, code: String)
     /// Read whatever he's about to show me. Nothing to look up here — the image
     /// comes from the UI, so `FridayEngine.scan` does the work.
     case scan(source: ScanSource)
@@ -52,6 +54,13 @@ enum Router {
 
         if contains(text, ["remind me", "reminder", "remember to", "don't let me forget"]) {
             return .reminder(title: reminderTitle(from: input), when: input)
+        }
+
+        // Before everything else, because a translation request can contain any
+        // words at all — "how do you say what time is it in French" would
+        // otherwise be answered with the time.
+        if let translation = translationRequest(in: input) {
+            return translation
         }
 
         // Writing to the calendar is checked before *reading* it, because
@@ -164,6 +173,57 @@ enum Router {
                         "my photos", "camera roll", "photo library"])
             ? .library
             : .camera
+    }
+
+    // MARK: - Translation
+
+    /// "How do you say good morning in French" → the phrase and `fr`.
+    ///
+    /// **Two independent gates, both required.** An opening that asks for a
+    /// translation, *and* a word that is genuinely a language. Either alone
+    /// over-matches badly: "what's the time in London" has the shape and no
+    /// language, and "I'm learning French" has a language and no request.
+    ///
+    /// Checked before every other route because the phrase being translated can
+    /// contain anything at all — "how do you say what time is it in French"
+    /// would otherwise be answered with the time, which is both wrong and
+    /// exactly the kind of confident mis-answer D-43 exists to prevent.
+    private static func translationRequest(in input: String) -> Intent? {
+        let lowered = input.lowercased()
+
+        let openings = ["how do you say ", "how do i say ", "how would you say ",
+                        "how to say ", "translate ", "what's ", "whats ",
+                        "what is ", "say "]
+        guard let opening = openings.first(where: lowered.contains),
+              let range = lowered.range(of: opening)
+        else { return nil }
+
+        let rest = String(input[range.upperBound...])
+        guard let (code, before) = Tongues.firstNamed(in: rest) else { return nil }
+
+        // The phrase is what sits between the opening and the language, minus
+        // the preposition that introduced it.
+        var phrase = before.trimmingCharacters(in: .whitespacesAndNewlines)
+        for tail in ["in", "into", "to", "for"] {
+            // The preposition standing alone means nothing was named:
+            // "translate to French" is a request with no object.
+            if phrase.lowercased() == tail {
+                phrase = ""
+                break
+            }
+            if phrase.lowercased().hasSuffix(" " + tail) {
+                phrase = String(phrase.dropLast(tail.count + 1))
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                break
+            }
+        }
+        phrase = phrase.trimmingCharacters(in: CharacterSet(charactersIn: "\"'“”‘’ ,"))
+
+        // Nothing to translate — "translate to French" on its own is a request
+        // with no object, and asking is better than translating an empty string.
+        guard !phrase.isEmpty else { return nil }
+
+        return .translate(phrase: phrase, code: code)
     }
 
     // MARK: - Calendar writes
@@ -387,6 +447,13 @@ enum Lookup {
 
             case .motion(let aspect, let dayOffset):
                 return await MotionTool.answer(aspect: aspect, dayOffset: dayOffset)
+
+            case .translate:
+                // Only Siri arrives here, for the same reason as `.scan` below:
+                // `FridayEngine` owns the translator and the voice that can
+                // pronounce the answer, and Siri would read French aloud in an
+                // English accent.
+                return "I'll do that in the app, boss — I can say it properly there."
 
             case .scan:
                 // Only Siri arrives here. `FridayEngine` intercepts every `.scan`

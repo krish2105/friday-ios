@@ -78,17 +78,22 @@ final class SpeechOutput {
     // MARK: - Speaking
 
     /// Speak, returning only once playback has finished or been cut off.
-    func speak(_ text: String) async {
+    /// `language` is a BCP-47 code, and is only passed when the caller knows
+    /// something the text cannot show. A translation into French is Latin
+    /// script like English, so the script test below cannot tell them apart —
+    /// but the engine that just asked for French certainly can.
+    func speak(_ text: String, in language: String? = nil) async {
         let line = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard speakReplies, !line.isEmpty else { return }
 
         stop()
 
         let utterance = AVSpeechUtterance(string: line)
-        // The voice is chosen from the script of the text itself, so nothing has
-        // to thread "this turn is in Hindi" down from the engine. An English
-        // voice reading Devanagari produces nothing usable.
-        utterance.voice = resolvedVoice(for: Bilingual.tongue(of: line))
+        // Otherwise the voice is chosen from the script of the text itself, so
+        // nothing has to thread "this turn is in Hindi" down from the engine. An
+        // English voice reading Devanagari produces nothing usable.
+        utterance.voice = language.map(resolvedVoice(forLanguage:))
+            ?? resolvedVoice(for: Bilingual.tongue(of: line))
         utterance.rate = rate
 
         isSpeaking = true
@@ -147,6 +152,16 @@ final class SpeechOutput {
             return chosen
         }
         return bestInstalledVoice()
+    }
+
+    /// The best voice for an explicit language.
+    ///
+    /// Falls back to whatever the system offers for the code, and to nil beyond
+    /// that — which makes the synthesiser use the default voice. The words are
+    /// still on screen either way, so a missing voice costs pronunciation, not
+    /// the answer.
+    func resolvedVoice(forLanguage code: String) -> AVSpeechSynthesisVoice? {
+        bestVoice(matching: code) ?? AVSpeechSynthesisVoice(language: code)
     }
 
     /// Highest-quality installed voice for a language code, if there is one.

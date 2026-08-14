@@ -1,6 +1,6 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-45, D-53–D-58, §10)
+**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-45, D-53–D-59, §10)
 **Repo state:** `main`, stage 3 landed at `15bca6f` · **Commits:** 47
 
 This replaces the previous handover, which was written by a cloud session with no Swift
@@ -92,7 +92,7 @@ session was diagnosed this way in about a minute.
 
 ## 3. What is built
 
-44 Swift files across two targets.
+46 Swift files across two targets.
 
 | Dir | Files | Contents |
 |---|---|---|
@@ -104,8 +104,8 @@ session was diagnosed this way in about a minute.
 | `UI/` | 9 | `ContentView`, `ConversationView`, `OrbView`, `TalkButton`, `SettingsView`, `AmbientBackground`, `GlassSurface`, `FridayTheme`, `Haptics` |
 | `LiveActivity/` | 3 | `FridayAttributes`, `LiveActivityController`, `FridayLiveActivity` |
 | `Intents/` | 2 | `AskFridayIntent` (+ `FridayAnswer`, `FridayShortcuts`), `StartListeningIntent` |
-| `Vision/` | 3 | `TextScanner`, `DocumentCamera`, `ReceiptReader` |
-| `Language/` | 2 | `Bilingual`, `Translator` |
+| `Vision/` | 4 | `TextScanner`, `DocumentCamera`, `ReceiptReader`, `BoardingPassReader` |
+| `Language/` | 3 | `Bilingual`, `Translator`, `Tongues` |
 | `Notify/` | 1 | `FridayNotifier` |
 | `FridayActivity/` | 3 | `FridayActivityBundle` (`@main`), `FridayListenControl`, `FridayLockWidget` |
 
@@ -507,6 +507,54 @@ The old §8 still stands except where noted. New decisions from device work:
   "when", and `call me back later` / `call it off` both staging calls to nobody. Four new
   needle groups is the largest single addition `Router` has had; extend the table, never test
   routing by hand.
+
+- **D-59 · Stage 5 — translate anything, and a second structured extractor.** Two features
+  shipped of the three designed. The third was **dropped on evidence**, which is the part
+  worth reading.
+
+  **`NLLanguageRecognizer` cannot detect romanised Hindi, and is confidently wrong.** It was
+  going to close the "kya haal hai" gap as a second opinion after `Bilingual.tongue`'s script
+  test. Measured on 2026-08-15:
+
+  | Input | Detected |
+  |---|---|
+  | "kya haal hai boss" | Dutch, 0.68 |
+  | "mujhe kal subah yaad dilana" | **Indonesian, 1.00** |
+  | "aap kaise hain" | Finnish, 0.38 |
+
+  Not one is Hindi and the worst is wrong at full confidence, so wiring it in would have sent
+  ordinary English turns through two translation hops on the strength of noise. Devanagari,
+  English and French all detect at ≥0.98, so the framework is sound — romanised text simply
+  is not its problem. **The romanised-Hindi gap stays open, and this is why.** Do not
+  reach for `NLLanguageRecognizer` to close it.
+
+  **Translation into any of the 22 supported languages.** `Tongues` maps spoken names, and
+  aliases people actually use, onto codes. Two gates are required together: a phrasing that
+  asks for a translation *and* a word that is genuinely a language — either alone over-matches
+  ("what's the time in London" has the shape, "I'm learning French" has the language).
+  Checked **before every other route**, because the phrase being translated can contain
+  anything: "how do you say what time is it in French" would otherwise be answered with the
+  clock.
+
+  The reply is the translation and nothing else — no "boss", no English frame — spoken in a
+  voice for that language via `SpeechOutput.speak(_:in:)`. Hearing it pronounced properly is
+  the whole value of the question, and an English voice wrapping a French phrase ruins the
+  one part that matters. It is a quotation, like the recognised text of a scanned page, which
+  also carries no form of address. **Each language needs its own pack**, so "not downloaded"
+  is the ordinary case and the line always names which language.
+
+  **`BoardingPassReader` generalises stage 3.** Deliberately the same shape as
+  `ReceiptReader` — cheap Swift gate, model selects, Swift refuses anything not on the page —
+  because that shape is what was worth generalising, not the receipt specifics. Unlike a
+  receipt there is no single field carrying all the risk, so *every* field is verified and any
+  that fails is simply not said; only a missing flight number rejects outright.
+
+  Both gates were caught wrong by tests before they ever ran on a device:
+  `containsFlightNumber` scanned single tokens and so **missed `6E 5231`**, the commonest way
+  a pass prints it, meaning the feature would never have fired; and "terminal" and "class"
+  had to leave the travel-word list because a card receipt prints "Terminal ID".
+
+  Routing truth table is now **58 cases**, all re-run every time.
 
 ### D-18 is now probably unreachable — do not delete it, do not trust it
 

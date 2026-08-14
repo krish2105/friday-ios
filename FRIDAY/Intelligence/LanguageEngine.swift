@@ -303,6 +303,26 @@ final class LanguageEngine {
         }
     }
 
+    /// Pulls the fields off a boarding pass. Same contract as `receipt(in:)`.
+    func boardingPass(in text: String) async -> BoardingPass? {
+        guard case .available = model.availability else { return nil }
+
+        return await bounded(seconds: 20) {
+            let session = LanguageModelSession {
+                """
+                You read boarding passes. Copy each field exactly as it is \
+                printed. Never reformat a time, never expand an airport code, \
+                never guess. If a field is not printed, return an empty string.
+                """
+            }
+            return try? await session.respond(
+                to: text,
+                generating: BoardingPass.self,
+                options: Self.generation
+            ).content
+        }
+    }
+
     /// Races `work` against a deadline, abandoning the loser.
     ///
     /// A wedged extraction would strand `FridayEngine` in `.thinking`, which

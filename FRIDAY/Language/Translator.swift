@@ -79,6 +79,21 @@ final class Translator {
         try await translate(hindi, from: Self.hindi, to: Self.english)
     }
 
+    /// English → anything the framework supports, for "how do you say ‹x› in ‹y›".
+    ///
+    /// Each target needs **its own** downloaded pack, exactly as Hindi does —
+    /// having Hindi installed does nothing for French. So `.notDownloaded` is
+    /// the ordinary case here rather than the exception, and the caller names
+    /// the language in the line it says back.
+    func translate(_ english: String, into code: String) async throws(TranslatorFailure) -> String {
+        try await translate(
+            english,
+            from: Self.english,
+            to: Locale.Language(identifier: code)
+        )
+    }
+
+
     /// English → Hindi, for what FRIDAY says back.
     func hindi(from english: String) async throws(TranslatorFailure) -> String {
         try await translate(english, from: Self.english, to: Self.hindi)
@@ -104,11 +119,21 @@ final class Translator {
         from source: Locale.Language,
         to target: Locale.Language
     ) async throws(TranslatorFailure) -> String {
-        // Written out rather than `isDownloaded ?? (await …)`: `??` takes an
-        // autoclosure, and an autoclosure cannot be async.
-        var ready = isDownloaded
-        if ready == nil { ready = await refreshAvailability() }
-        guard ready == true else { throw .notDownloaded }
+        // Hindi is the conversational path — asked on most turns, so its answer
+        // is cached. Any other language is asked about fresh: it comes up
+        // rarely, and each language has a pack of its own, so having Hindi
+        // installed says nothing about French.
+        if source.languageCode?.identifier == "hi" || target.languageCode?.identifier == "hi" {
+            // Written out rather than `isDownloaded ?? (await …)`: `??` takes an
+            // autoclosure, and an autoclosure cannot be async.
+            var ready = isDownloaded
+            if ready == nil { ready = await refreshAvailability() }
+            guard ready == true else { throw .notDownloaded }
+        } else {
+            guard await LanguageAvailability().status(from: source, to: target) == .installed else {
+                throw .notDownloaded
+            }
+        }
 
         do {
             let session = TranslationSession(installedSource: source, target: target)

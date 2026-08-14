@@ -46,3 +46,30 @@ struct Receipt {
     @Guide(description: "The grand total paid, with its currency symbol, copied exactly as printed. Never add anything up.")
     let total: String
 }
+
+/// What a boarding pass says.
+///
+/// Same contract as `Receipt`, and for the same reason: every field is a claim
+/// about the page that Swift then checks. Getting a gate wrong sends someone to
+/// the wrong end of a terminal, which is the travel equivalent of misreporting
+/// a total.
+@Generable
+struct BoardingPass {
+    @Guide(description: "The flight number as printed, such as 6E 5231 or BA117. Empty if not printed.")
+    let flight: String
+
+    @Guide(description: "Where the flight departs from, copied exactly as printed. Empty if not printed.")
+    let from: String
+
+    @Guide(description: "Where the flight arrives, copied exactly as printed. Empty if not printed.")
+    let to: String
+
+    @Guide(description: "The gate, copied exactly as printed. Empty if not printed.")
+    let gate: String
+
+    @Guide(description: "The seat, copied exactly as printed. Empty if not printed.")
+    let seat: String
+
+    @Guide(description: "The boarding or departure time, copied exactly as printed. Do not reformat it. Empty if not printed.")
+    let boards: String
+}

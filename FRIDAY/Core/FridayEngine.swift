@@ -209,6 +209,14 @@ final class FridayEngine {
         // `raiseScanner` puts the camera or the picker up *before* the reply is
         // spoken — `deliver` waits on the whole utterance, and it should already
         // be sliding into view while she says this.
+        // Like `.scan`, this cannot go through `Lookup`: it needs the translator
+        // the engine owns, and it is the one reply spoken in a voice that is not
+        // FRIDAY's own.
+        if case .translate(let phrase, let code) = intent {
+            await translate(phrase, into: code, at: replyIndex)
+            return
+        }
+
         if case .scan(let source) = intent {
             let answer = await voiced(await raiseScanner(source), factual: false)
             conversation[replyIndex].text = answer
@@ -328,6 +336,42 @@ final class FridayEngine {
         }
     }
 
+    // MARK: - Translating a phrase
+
+    /// "How do you say ‹phrase› in ‹language›" — answered in that language, and
+    /// spoken in a voice that can pronounce it.
+    ///
+    /// The reply is the translation and **nothing else**: no "boss", no English
+    /// frame. Hearing it said properly is the entire value of the question, and
+    /// an English voice wrapping a French phrase mangles the one part that
+    /// matters. The persona contract is not broken so much as inapplicable —
+    /// this is a quotation, the same as the recognised text of a scanned page,
+    /// which also carries no form of address.
+    private func translate(_ phrase: String, into code: String, at replyIndex: Int) async {
+        do {
+            let translated = try await translator.translate(phrase, into: code)
+            conversation[replyIndex].text = translated
+            conversation[replyIndex].tone = "calm"
+            Haptics.replyReceived()
+            await deliver(translated, in: code)
+        } catch {
+            // Every language has its own pack, so "not downloaded" is the
+            // ordinary case here rather than the exception — and the line names
+            // which language, because "download it" is useless without that.
+            let language = Tongues.name(for: code)
+            let line = switch error {
+            case .notDownloaded:
+                "I'd need \(language) downloaded first, boss. It's in Settings, Apps, Translate, Downloaded Languages."
+            case .failed:
+                "That one didn't translate, boss. Try me again?"
+            }
+            conversation[replyIndex].text = await voiced(line, factual: false)
+            conversation[replyIndex].tone = "concerned"
+            Haptics.failed()
+            await deliver(conversation[replyIndex].text)
+        }
+    }
+
     // MARK: - Reading
 
     /// Longer than this and the text gets summarised instead of read out. A
@@ -424,6 +468,20 @@ final class FridayEngine {
             return
         }
 
+        // A boarding pass, same three gates as a receipt and the same fallback
+        // if any of them declines. Checked first because a pass often carries a
+        // fare total too, and the flight is the more useful answer.
+        if BoardingPassReader.looksLikeBoardingPass(text),
+           let extracted = await language.boardingPass(in: text),
+           let pass = BoardingPassReader.verified(extracted, against: text) {
+            let line = await voiced(BoardingPassReader.sentence(for: pass), factual: true)
+            conversation.append(ConversationTurn(speaker: .friday, text: text, tone: "calm"))
+            conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
+            Haptics.replyReceived()
+            await deliver(line)
+            return
+        }
+
         // Short enough to hear: one turn, spoken exactly as it is shown. The
         // recognised text is carried through whole and unedited — the wrapper
         // only puts "boss" in front of it, because the persona contract holds on
@@ -472,7 +530,7 @@ final class FridayEngine {
     // MARK: - Speaking
 
     /// .speaking → speak → .idle, unless barge-in took the turn first.
-    private func deliver(_ text: String) async {
+    private func deliver(_ text: String, in language: String? = nil) async {
         guard voice.speakReplies, !text.isEmpty else {
             state = .idle
             return
@@ -485,7 +543,7 @@ final class FridayEngine {
         // here, so the mic cannot hear FRIDAY's own voice.
         try? audioSession.activate()
 
-        await voice.speak(text)
+        await voice.speak(text, in: language)
 
         // If the user barged in, they now own both the state and the session.
         guard state == .speaking else { return }

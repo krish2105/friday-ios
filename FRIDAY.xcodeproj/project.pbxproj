@@ -50,6 +50,8 @@
 		AA0000000000000000000856 /* ContactTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000756 /* ContactTool.swift */; };
 		AA0000000000000000000857 /* EventService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000757 /* EventService.swift */; };
 		AA0000000000000000000858 /* MotionTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000758 /* MotionTool.swift */; };
+		AA0000000000000000000859 /* Tongues.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000759 /* Tongues.swift */; };
+		AA000000000000000000085A /* BoardingPassReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000075A /* BoardingPassReader.swift */; };
 		AA0000000000000000000840 /* Intent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000740 /* Intent.swift */; };
 		AA0000000000000000000830 /* FridayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071F /* FridayAttributes.swift */; };
 		AA0000000000000000000831 /* FridayLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000721 /* FridayLiveActivity.swift */; };
@@ -98,6 +100,8 @@
 		AA0000000000000000000756 /* ContactTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactTool.swift; sourceTree = "<group>"; };
 		AA0000000000000000000757 /* EventService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventService.swift; sourceTree = "<group>"; };
 		AA0000000000000000000758 /* MotionTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionTool.swift; sourceTree = "<group>"; };
+		AA0000000000000000000759 /* Tongues.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tongues.swift; sourceTree = "<group>"; };
+		AA000000000000000000075A /* BoardingPassReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardingPassReader.swift; sourceTree = "<group>"; };
 		AA0000000000000000000740 /* Intent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intent.swift; sourceTree = "<group>"; };
 		AA0000000000000000000702 /* FridayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayState.swift; sourceTree = "<group>"; };
 		AA0000000000000000000703 /* FridayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayEngine.swift; sourceTree = "<group>"; };
@@ -264,6 +268,7 @@
 			children = (
 				AA0000000000000000000752 /* Bilingual.swift */,
 				AA0000000000000000000753 /* Translator.swift */,
+				AA0000000000000000000759 /* Tongues.swift */,
 			);
 			path = Language;
 			sourceTree = "<group>";
@@ -274,6 +279,7 @@
 				AA0000000000000000000750 /* TextScanner.swift */,
 				AA0000000000000000000751 /* DocumentCamera.swift */,
 				AA0000000000000000000754 /* ReceiptReader.swift */,
+				AA000000000000000000075A /* BoardingPassReader.swift */,
 			);
 			path = Vision;
 			sourceTree = "<group>";
@@ -419,6 +425,8 @@
 				AA0000000000000000000856 /* ContactTool.swift in Sources */,
 				AA0000000000000000000857 /* EventService.swift in Sources */,
 				AA0000000000000000000858 /* MotionTool.swift in Sources */,
+				AA0000000000000000000859 /* Tongues.swift in Sources */,
+				AA000000000000000000085A /* BoardingPassReader.swift in Sources */,
 				AA0000000000000000000841 /* AskFridayIntent.swift in Sources */,
 				AA0000000000000000000842 /* StartListeningIntent.swift in Sources */,
 				AA0000000000000000000803 /* FridayEngine.swift in Sources */,
