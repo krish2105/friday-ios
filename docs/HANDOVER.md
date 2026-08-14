@@ -1,6 +1,6 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-09, D-45, D-53–D-68, §10)
+**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-09, D-45, D-52, D-53–D-69, §10)
 **Repo state:** `main`, stage 3 landed at `15bca6f` · **Commits:** 47
 
 This replaces the previous handover, which was written by a cloud session with no Swift
@@ -92,7 +92,7 @@ session was diagnosed this way in about a minute.
 
 ## 3. What is built
 
-60 Swift files across two targets.
+61 Swift files across two targets.
 
 | Dir | Files | Contents |
 |---|---|---|
@@ -107,7 +107,7 @@ session was diagnosed this way in about a minute.
 | `Vision/` | 8 | `TextScanner`, `DocumentCamera`, `ReceiptReader`, `BoardingPassReader`, `BarcodeReader`, `LiveScanner`, `PDFReader`, `CardReader` |
 | `Language/` | 3 | `Bilingual`, `Translator`, `Tongues` |
 | `Notify/` | 1 | `FridayNotifier` |
-| `FridayActivity/` | 3 | `FridayActivityBundle` (`@main`), `FridayListenControl`, `FridayLockWidget` |
+| `FridayActivity/` | 4 | `FridayActivityBundle` (`@main`), `FridayListenControl`, `FridayLockWidget`, `FridayStatusWidget` |
 
 ### Per-session status
 
@@ -801,7 +801,7 @@ The old §8 still stands except where noted. New decisions from device work:
   The write goes through `CNSaveRequest` and is reachable **only from the Save button** — D-34,
   extended from reminders and calendar to contacts.
 
-  **Still not built from stage 9's design: the share extension and the Home Screen widget.** The share extension is the one with a real obstacle rather than just
+  **Still not built from stage 9's design: the share extension.** The share extension is the one with a real obstacle rather than just
   cost — an extension hands data to its host app through an **App Group**, which is paid-gated
   (D-52), so it would have to be entirely self-contained and duplicate the reading path into a
   second target. The widget's blocker is smaller but unverified: whether a widget extension
@@ -837,6 +837,36 @@ The old §8 still stands except where noted. New decisions from device work:
   mode is one-way, which is honest and still useful.
 
   Routing truth table is now **90 cases**.
+
+- **D-69 · A Home Screen widget that shows real data — without touching D-52.**
+
+  D-52 made the Lock Screen widget a launcher because a widget runs in its own process, and
+  reading what the *app* wrote needs an App Group, which is paid-gated. **That reasoning is
+  untouched.** This sidesteps it rather than contradicting it: the widget does not read the
+  app's data, it reads **the same system stores the app reads**. EventKit and CoreMotion
+  belong to the system, not to FRIDAY, so no shared container is involved and no capability is
+  needed.
+
+  **It checks access and never requests it**, and that single decision resolved the blocker
+  this feature was parked on. The open question was whether a widget extension inherits the
+  containing app's EventKit and CoreMotion authorisation — and asking would have needed the
+  usage strings duplicated into the extension's own Info.plist, a second copy that drifts.
+  Reading `EKEventStore.authorizationStatus(for:)` and `CMPedometer.authorizationStatus()`
+  needs neither: where the grant exists the widget renders, and where it does not it says
+  "open FRIDAY" and points at the place the question belongs. A widget has no business raising
+  a permission prompt from the Home Screen anyway, where there is no context for the question.
+
+  So the feature **cannot die on delivery** — worst case it shows less. That is the shape to
+  reach for whenever a dependency cannot be verified before building.
+
+  All-day events are excluded: "Independence Day" is not the next thing you have to be
+  somewhere for, and it is exactly what filled the app's own calendar answer with noise before
+  D-66. The timeline reloads on the half hour **or when the next event starts**, whichever is
+  sooner — WidgetKit budgets refreshes, so the most useful place to spend one is the moment
+  the thing on screen stops being true.
+
+  The palette is repeated in the extension rather than shared. `FridayTheme` lives in the app
+  target and pulling it across would drag `AIStatus` and the rest with it, for four colours.
 
 ### D-18 is now probably unreachable — do not delete it, do not trust it
 
