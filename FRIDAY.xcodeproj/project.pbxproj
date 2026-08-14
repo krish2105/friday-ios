@@ -40,6 +40,10 @@
 		AA0000000000000000000843 /* StartListeningIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000742 /* StartListeningIntent.swift */; };
 		AA0000000000000000000845 /* FridayLockWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000744 /* FridayLockWidget.swift */; };
 		AA0000000000000000000846 /* FridayStatusWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000745 /* FridayStatusWidget.swift */; };
+		AA0000000000000000000880 /* TimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000780 /* TimerAttributes.swift */; };
+		AA0000000000000000000881 /* TimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000780 /* TimerAttributes.swift */; };
+		AA0000000000000000000882 /* TimerActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000781 /* TimerActivityController.swift */; };
+		AA0000000000000000000883 /* FridayTimerActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000782 /* FridayTimerActivity.swift */; };
 		AA0000000000000000000870 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000770 /* ShareViewController.swift */; };
 		AA0000000000000000000871 /* SharedTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000771 /* SharedTextView.swift */; };
 		AA0000000000000000000872 /* TextScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000750 /* TextScanner.swift */; };
@@ -117,6 +121,9 @@
 		AA0000000000000000000742 /* StartListeningIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartListeningIntent.swift; sourceTree = "<group>"; };
 		AA0000000000000000000744 /* FridayLockWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayLockWidget.swift; sourceTree = "<group>"; };
 		AA0000000000000000000745 /* FridayStatusWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayStatusWidget.swift; sourceTree = "<group>"; };
+		AA0000000000000000000780 /* TimerAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerAttributes.swift; sourceTree = "<group>"; };
+		AA0000000000000000000781 /* TimerActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerActivityController.swift; sourceTree = "<group>"; };
+		AA0000000000000000000782 /* FridayTimerActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayTimerActivity.swift; sourceTree = "<group>"; };
 		AA0000000000000000000770 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		AA0000000000000000000771 /* SharedTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedTextView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000772 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -366,6 +373,8 @@
 				AA000000000000000000071F /* FridayAttributes.swift */,
 				AA0000000000000000000720 /* LiveActivityController.swift */,
 				AA0000000000000000000721 /* FridayLiveActivity.swift */,
+				AA0000000000000000000780 /* TimerAttributes.swift */,
+				AA0000000000000000000781 /* TimerActivityController.swift */,
 			);
 			path = LiveActivity;
 			sourceTree = "<group>";
@@ -387,6 +396,7 @@
 				AA0000000000000000000743 /* FridayListenControl.swift */,
 				AA0000000000000000000744 /* FridayLockWidget.swift */,
 				AA0000000000000000000745 /* FridayStatusWidget.swift */,
+				AA0000000000000000000782 /* FridayTimerActivity.swift */,
 				AA0000000000000000000731 /* Info.plist */,
 			);
 			path = FridayActivity;
@@ -555,6 +565,8 @@
 				AA0000000000000000000865 /* ReckonTool.swift in Sources */,
 				AA0000000000000000000866 /* TimerTool.swift in Sources */,
 				AA0000000000000000000867 /* CardReader.swift in Sources */,
+				AA0000000000000000000880 /* TimerAttributes.swift in Sources */,
+				AA0000000000000000000882 /* TimerActivityController.swift in Sources */,
 				AA0000000000000000000841 /* AskFridayIntent.swift in Sources */,
 				AA0000000000000000000842 /* StartListeningIntent.swift in Sources */,
 				AA0000000000000000000803 /* FridayEngine.swift in Sources */,
@@ -595,6 +607,8 @@
 				AA0000000000000000000844 /* FridayListenControl.swift in Sources */,
 				AA0000000000000000000845 /* FridayLockWidget.swift in Sources */,
 				AA0000000000000000000846 /* FridayStatusWidget.swift in Sources */,
+				AA0000000000000000000881 /* TimerAttributes.swift in Sources */,
+				AA0000000000000000000883 /* FridayTimerActivity.swift in Sources */,
 				AA0000000000000000000831 /* FridayLiveActivity.swift in Sources */,
 				AA0000000000000000000830 /* FridayAttributes.swift in Sources */,
 			);

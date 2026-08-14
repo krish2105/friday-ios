@@ -186,6 +186,7 @@ final class FridayEngine {
     let language: LanguageEngine
     let translator = Translator()
     let liveActivity = LiveActivityController()
+    let timerActivity = TimerActivityController()
 
     /// Last thing FRIDAY said, for the expanded Dynamic Island.
     private var lastReplySnippet: String {
@@ -391,6 +392,12 @@ final class FridayEngine {
             let due = Date().addingTimeInterval(TimeInterval(seconds))
             let spoken = TimerTool.spoken(seconds)
             let set = await notifier.nudge("your \(spoken) timer is up", at: due)
+
+            // The Island shows it running; the notification is what actually
+            // fires. Deliberately independent — a Live Activity can be disabled
+            // system-wide, and a timer that only existed there would silently
+            // never go off.
+            if set { timerActivity.start(label: spoken, deadline: due) }
 
             let line = set
                 ? "Timer set for \(spoken), boss."

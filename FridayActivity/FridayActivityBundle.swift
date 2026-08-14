@@ -15,5 +15,6 @@ struct FridayActivityBundle: WidgetBundle {
         FridayListenControl()
         FridayLockWidget()
         FridayStatusWidget()
+        FridayTimerActivity()
     }
 }
