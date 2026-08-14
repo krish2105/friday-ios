@@ -32,6 +32,18 @@ enum LanguageEngineFailure: Error, Equatable, Sendable {
     }
 }
 
+/// Guarantees exactly one resume of a continuation — resuming twice is a crash.
+///
+/// At file scope because a type cannot be nested inside a generic function.
+private actor ResumeGate {
+    private var taken = false
+
+    func claim() -> Bool {
+        defer { taken = true }
+        return !taken
+    }
+}
+
 /// Wraps `LanguageModelSession` and the FRIDAY persona.
 @MainActor
 @Observable
@@ -252,6 +264,68 @@ final class LanguageEngine {
             throw failure
         } catch {
             throw LanguageEngineFailure.other(error.localizedDescription)
+        }
+    }
+
+    // MARK: - Receipts
+
+    /// Pulls the fields off a receipt, on a session of its own.
+    ///
+    /// Separate from the conversational session on purpose. That one carries the
+    /// persona and the whole exchange, and pouring a page of recognised text
+    /// into it would spend the ~4,096 token budget D-36 protects on a one-shot
+    /// job that has nothing to do with the conversation — and leave the page
+    /// sitting in the transcript afterwards, steering every later reply.
+    ///
+    /// Seeded top-3 rather than greedy, same as D-53. Copying is exactly the
+    /// task argmax is best at, but a `String` field in guided generation is
+    /// unbounded and greedy is what loops; and the answer is verified against
+    /// the page regardless, so a worse pick is caught rather than believed.
+    ///
+    /// `nil` on anything going wrong. There is nothing to say about a failed
+    /// extraction that the ordinary summary does not say better.
+    func receipt(in text: String) async -> Receipt? {
+        guard case .available = model.availability else { return nil }
+
+        return await bounded(seconds: 20) {
+            let session = LanguageModelSession {
+                """
+                You read receipts. Copy each field exactly as it is printed. \
+                Never calculate a total, never reformat a date, never guess at \
+                a name. If a field is not printed, return an empty string.
+                """
+            }
+            return try? await session.respond(
+                to: text,
+                generating: Receipt.self,
+                options: Self.generation
+            ).content
+        }
+    }
+
+    /// Races `work` against a deadline, abandoning the loser.
+    ///
+    /// A wedged extraction would strand `FridayEngine` in `.thinking`, which
+    /// HANDOVER §7 calls a dead app — the talk button only acts on `.idle`.
+    ///
+    /// Deliberately its own copy of the race rather than a generalisation of
+    /// `FridayEngine.respondWithDeadline`. That one is hard-won, subtle and
+    /// verified on device, and a one-shot extraction is not worth reopening it.
+    private func bounded<T: Sendable>(
+        seconds: Int,
+        _ work: @escaping @Sendable () async -> T?
+    ) async -> T? {
+        let gate = ResumeGate()
+
+        return await withCheckedContinuation { continuation in
+            Task {
+                let value = await work()
+                if await gate.claim() { continuation.resume(returning: value) }
+            }
+            Task {
+                try? await Task.sleep(for: .seconds(seconds))
+                if await gate.claim() { continuation.resume(returning: nil) }
+            }
         }
     }
 

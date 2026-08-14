@@ -402,6 +402,22 @@ final class FridayEngine {
             return
         }
 
+        // A receipt is worth more than a summary of a receipt, so it gets first
+        // refusal. Three gates, and any of them declining costs nothing but the
+        // ordinary summary below: Swift decides it looks like a receipt at all,
+        // the model picks the fields out, and Swift then refuses any field it
+        // cannot find in the page. See `ReceiptReader`.
+        if ReceiptReader.looksLikeReceipt(text),
+           let extracted = await language.receipt(in: text),
+           let receipt = ReceiptReader.verified(extracted, against: text) {
+            let line = await voiced(ReceiptReader.sentence(for: receipt), factual: true)
+            conversation.append(ConversationTurn(speaker: .friday, text: text, tone: "calm"))
+            conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
+            Haptics.replyReceived()
+            await deliver(line)
+            return
+        }
+
         // Short enough to hear: one turn, spoken exactly as it is shown. The
         // recognised text is carried through whole and unedited — the wrapper
         // only puts "boss" in front of it, because the persona contract holds on

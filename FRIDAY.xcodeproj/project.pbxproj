@@ -45,6 +45,7 @@
 		AA0000000000000000000851 /* DocumentCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000751 /* DocumentCamera.swift */; };
 		AA0000000000000000000852 /* Bilingual.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000752 /* Bilingual.swift */; };
 		AA0000000000000000000853 /* Translator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000753 /* Translator.swift */; };
+		AA0000000000000000000854 /* ReceiptReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000754 /* ReceiptReader.swift */; };
 		AA0000000000000000000840 /* Intent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000740 /* Intent.swift */; };
 		AA0000000000000000000830 /* FridayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071F /* FridayAttributes.swift */; };
 		AA0000000000000000000831 /* FridayLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000721 /* FridayLiveActivity.swift */; };
@@ -88,6 +89,7 @@
 		AA0000000000000000000751 /* DocumentCamera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentCamera.swift; sourceTree = "<group>"; };
 		AA0000000000000000000752 /* Bilingual.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bilingual.swift; sourceTree = "<group>"; };
 		AA0000000000000000000753 /* Translator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Translator.swift; sourceTree = "<group>"; };
+		AA0000000000000000000754 /* ReceiptReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptReader.swift; sourceTree = "<group>"; };
 		AA0000000000000000000740 /* Intent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intent.swift; sourceTree = "<group>"; };
 		AA0000000000000000000702 /* FridayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayState.swift; sourceTree = "<group>"; };
 		AA0000000000000000000703 /* FridayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayEngine.swift; sourceTree = "<group>"; };
@@ -251,6 +253,7 @@
 			children = (
 				AA0000000000000000000750 /* TextScanner.swift */,
 				AA0000000000000000000751 /* DocumentCamera.swift */,
+				AA0000000000000000000754 /* ReceiptReader.swift */,
 			);
 			path = Vision;
 			sourceTree = "<group>";
@@ -391,6 +394,7 @@
 				AA0000000000000000000851 /* DocumentCamera.swift in Sources */,
 				AA0000000000000000000852 /* Bilingual.swift in Sources */,
 				AA0000000000000000000853 /* Translator.swift in Sources */,
+				AA0000000000000000000854 /* ReceiptReader.swift in Sources */,
 				AA0000000000000000000841 /* AskFridayIntent.swift in Sources */,
 				AA0000000000000000000842 /* StartListeningIntent.swift in Sources */,
 				AA0000000000000000000803 /* FridayEngine.swift in Sources */,

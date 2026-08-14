@@ -1,7 +1,7 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-45, D-53–D-56, §10)
-**Repo state:** `main` @ `d9a0738` · **Commits:** 42
+**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-45, D-53–D-57, §10)
+**Repo state:** `main` @ `9c7d252` · **Commits:** 46
 
 This replaces the previous handover, which was written by a cloud session with no Swift
 toolchain. Everything it warned about has now been compiled, run on a physical iPhone 16 Pro,
@@ -92,7 +92,7 @@ session was diagnosed this way in about a minute.
 
 ## 3. What is built
 
-39 Swift files across two targets.
+40 Swift files across two targets.
 
 | Dir | Files | Contents |
 |---|---|---|
@@ -104,7 +104,7 @@ session was diagnosed this way in about a minute.
 | `UI/` | 9 | `ContentView`, `ConversationView`, `OrbView`, `TalkButton`, `SettingsView`, `AmbientBackground`, `GlassSurface`, `FridayTheme`, `Haptics` |
 | `LiveActivity/` | 3 | `FridayAttributes`, `LiveActivityController`, `FridayLiveActivity` |
 | `Intents/` | 2 | `AskFridayIntent` (+ `FridayAnswer`, `FridayShortcuts`), `StartListeningIntent` |
-| `Vision/` | 2 | `TextScanner`, `DocumentCamera` |
+| `Vision/` | 3 | `TextScanner`, `DocumentCamera`, `ReceiptReader` |
 | `Language/` | 2 | `Bilingual`, `Translator` |
 | `FridayActivity/` | 3 | `FridayActivityBundle` (`@main`), `FridayListenControl`, `FridayLockWidget` |
 
@@ -144,22 +144,22 @@ model. Only conversational turns degrade. Half the app keeps working with the mo
 App Intent, Siri shortcuts, Control Centre control and Lock Screen widget all built and
 verified. Two spec items could not be met as written — see D-51 and D-52.
 
-### Document reading — stages 1 and 2 are in and verified on device
+### Document reading — all three stages are in
 
-`Vision/` is a feature after Phase C, in three stages. Stage 1 (`TextScanner`,
-`RecognizeDocumentsRequest`) and stage 2 (photo library and live camera entry points, routed
-through `Router`) are committed. **Stage 3 — `@Generable` structured extraction, receipt to
-merchant/date/total — is not started.**
+`Vision/` is a feature after Phase C, in three stages, all now committed. Stage 1
+(`TextScanner`, `RecognizeDocumentsRequest`), stage 2 (photo library and live camera entry
+points, routed through `Router`), stage 3 (`@Generable` receipt extraction — see D-57).
 
-Confirmed by the owner on the 16 Pro on 2026-08-15: the camera route scans a page and FRIDAY
-reads it back. D-53's repetition fix was confirmed in the same pass — "what languages do you
-know" now answers and stops.
+Stages 1 and 2 were confirmed by the owner on the 16 Pro on 2026-08-15: the camera route
+scans a page and FRIDAY reads it back. D-53's repetition fix was confirmed in the same pass.
+**Stage 3 has not been run against a real receipt** — its Swift half passes 25 cases,
+including every way of getting the total wrong, but no receipt has been photographed.
 
 ### Suggested next work
 
-Stage 3 (`@Generable` receipt extraction), or hardening (Router phrasings, the
-denied-permission paths), then either Session 8's LiveKit bridge or App Store preparation,
-which needs a paid account. Hindi is now in progress — see §10.8.
+Photograph a real receipt (§10.9) and type a Hindi sentence (§10.8) — both are built and
+neither has been run. Then hardening (Router phrasings, the denied-permission paths), or
+Session 8's LiveKit bridge, or App Store preparation, which needs a paid account.
 
 ---
 
@@ -433,6 +433,40 @@ The old §8 still stands except where noted. New decisions from device work:
   warning, which is worse twice over — the race stays, and a zero-warning build stops meaning
   anything.
 
+- **D-57 · The model selects, Swift verifies. Nothing unverified is ever spoken.**
+  Stage 3 asks a ~3B model to read money off a photograph, which is D-44's failure with the
+  stakes raised: "TOTAL 47.30" coming back as 43.70 is a confidently wrong answer about the
+  boss's money. Guided generation gives a typed `Receipt`, but **typed is not true** — the
+  fields are still whatever the model produced.
+
+  So the model's job is reduced to *selection*: each `@Guide` asks for the value **copied
+  exactly as printed**, which turns the answer into a claim about the page that Swift can
+  check. `ReceiptReader.verified` then does the checking, and it is the whole feature.
+
+  Three gates, each cheap, each declining costs only the ordinary summary:
+
+  1. `looksLikeReceipt` — Swift decides whether an extraction is worth its seconds. Needs a
+     billing word **and** a currency amount; either alone matches an essay about totals or a
+     price on a poster. The model is never asked whether it should be asked, which is the
+     same division of labour as `Router`.
+  2. The model extracts, on a session of its own — the conversational one carries the persona
+     and would keep the whole page in its transcript, steering every later reply (D-36).
+  3. `verified` refuses anything it cannot find. **The total must appear on a line that says
+     it is the total**, and that is the part worth understanding: searching the whole page
+     proves only that the number was printed *somewhere*, so the tax line, the subtotal, the
+     bill number and the card digits would all have passed. Requiring the label pins which
+     number it is. Merchant and date only have to appear anywhere, and are **blanked rather
+     than rejected** when they do not — a receipt without a merchant is still worth saying,
+     a receipt with the wrong number is worse than none.
+
+  The spoken line is composed in Swift from verified fields, because the model has already
+  had its turn and letting it write the sentence hands back the number it was just checked on.
+
+  25 cases pass, including every way of being wrong: an invented total, a transposed one, the
+  subtotal, a GST line, a line item, the bill number, the card digits. A receipt that prints
+  its total on the *following* line is rejected and falls back to the summary — the right way
+  round, since a missed extraction costs a nicety and a wrong one misreports what he spent.
+
 ### D-18 is now probably unreachable — do not delete it, do not trust it
 
 `LanguageEngine` still carries the full context-overflow path: catch
@@ -498,7 +532,14 @@ call, not the next session's.
    sentence, this is compiled-only — per §1, that proves almost nothing. Latency is the first
    thing to watch: two translation hops land on top of a turn that already races a 20s
    deadline.
-9. **Superseded — kept for the measurement.** Hindi conversational support. Measured
+9. **Stage 3 has never met a real receipt.** See D-57. Its Swift half — the heuristic and
+   the verification — passes 25 cases, but that half is only *half*: nothing has confirmed
+   the model returns copied values rather than reformatted ones on a genuine photographed
+   receipt. If extraction never fires, the most likely cause is the model reformatting the
+   total rather than copying it, and the diagnosis is to compare `Receipt.total` against the
+   `TextScanner` transcript. Rejection is the safe direction, so this fails quietly to the
+   ordinary summary — which also means it can be broken without looking broken.
+10. **Superseded — kept for the measurement.** Hindi conversational support. Measured
    on 2026-08-15, not recalled: `SystemLanguageModel.supportedLanguages` returns 23
    languages and Hindi is not among them — `supportsLocale(hi_IN)` is `false`. Independently,
    `SpeechTranscriber.supportedLocales` returns 30 locales with **no** Hindi at all, so it
