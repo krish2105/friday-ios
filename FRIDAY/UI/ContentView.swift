@@ -104,10 +104,20 @@ struct ContentView: View {
                 .fill(FridayTheme.amber)
                 .frame(width: 5, height: 5)
 
+            // Must be able to shrink. With `tracking(4.2)` this title is ~134pt
+            // and the status chip ~138pt, which together with the gear and the
+            // stack spacing came to ~351pt of unshrinkable content inside the
+            // ~353pt available on a 393pt screen. The HStack overflowed, the
+            // parent VStack took its oversized width, and the ZStack centred
+            // the result — clipping the header, every bubble and the footer at
+            // BOTH edges. Letting the text scale keeps the design at normal
+            // sizes and degrades instead of overflowing when it cannot fit.
             Text("F.R.I.D.A.Y.")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .tracking(4.2)
                 .foregroundStyle(FridayTheme.textPrimary.opacity(0.85))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
 
             Spacer()
 
@@ -145,6 +155,8 @@ struct ContentView: View {
                 .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
                 .tracking(1.3)
                 .foregroundStyle(status.accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
