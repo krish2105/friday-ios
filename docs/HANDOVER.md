@@ -1,6 +1,6 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-09, D-45, D-53–D-64, §10)
+**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-09, D-45, D-53–D-66, §10)
 **Repo state:** `main`, stage 3 landed at `15bca6f` · **Commits:** 47
 
 This replaces the previous handover, which was written by a cloud session with no Swift
@@ -92,7 +92,7 @@ session was diagnosed this way in about a minute.
 
 ## 3. What is built
 
-57 Swift files across two targets.
+59 Swift files across two targets.
 
 | Dir | Files | Contents |
 |---|---|---|
@@ -100,7 +100,7 @@ session was diagnosed this way in about a minute.
 | `Core/` | 7 | `FridayEngine`, `FridayState`, `FridayPersona`, `ConversationTurn`, **`Intent`**, `EventService`, `Deadline` |
 | `Intelligence/` | 3 | `Availability`, `Generables`, `LanguageEngine` |
 | `Speech/` | 3 | `AudioSessionManager`, `SpeechInput`, `SpeechOutput` |
-| `Tools/` | 8 | `FridayTool`, `TimeTool`, `DeviceTool`, `WeatherTool`, `CalendarTool`, `ReminderTool`, `ContactTool`, `MotionTool` |
+| `Tools/` | 10 | `FridayTool`, `TimeTool`, `DeviceTool`, `WeatherTool`, `CalendarTool`, `ReminderTool`, `ContactTool`, `MotionTool`, `ReckonTool`, `TimerTool` |
 | `UI/` | 13 | `ContentView`, `ConversationView`, `OrbView`, `TalkButton`, `SettingsView`, `AmbientBackground`, `GlassSurface`, `FridayTheme`, `Haptics`, **`ActionSlot`**, **`InputBar`**, **`StatusHeader`**, **`CapabilitiesSheet`**, **`HeroPanel`** |
 | `LiveActivity/` | 3 | `FridayAttributes`, `LiveActivityController`, `FridayLiveActivity` |
 | `Intents/` | 3 | `AskFridayIntent` (+ `FridayAnswer`, `FridayShortcuts`), `StartListeningIntent`, `FridaySnippet` |
@@ -737,6 +737,49 @@ The old §8 still stands except where noted. New decisions from device work:
 
   **Still unmeasured: Release idle CPU.** The hero puts the orb in the ambient field's
   brightest region, which is precisely where glass re-sampling was expensive at 8%.
+
+- **D-65 · Every long path is bounded, including the one that was not.** Routed tool lookups
+  ran with **no deadline** while chat, PDFs and extraction all had one. That was invisible
+  until a device screenshot showed *"how many steps have I done"* sitting on **Thinking…**
+
+  A tool has no timeout of its own. `CMPedometer`, `EKEventStore` and `CNContactStore` all sit
+  behind callbacks that are **not obliged to fire**, and the first motion query raises a
+  permission prompt whose handler may never arrive. An unresumed continuation is not
+  cancellable, so the turn strands in `.thinking` and the talk button's `state == .idle` guard
+  makes the app unusable until relaunch. **HANDOVER §7's dead app, reached by a new road** —
+  and the general lesson is that "everything is bounded" has to be checked against the code,
+  not remembered.
+
+  Bounded at twelve seconds: a lookup that takes longer has failed, whatever it says it is
+  doing.
+
+- **D-66 · Stage 9a — timers, reckoning, clipboard.**
+
+  **Duplicate calendar events**, fixed alongside. Subscribed calendars overlap and EventKit
+  reports each copy separately because to it they *are* separate — a public holiday carried by
+  four calendars read back as "Independence Day, all day" four times. Deduplicated on what a
+  person would call the same event: same title, same start.
+
+  **`ReckonTool` is D-44 at its cleanest.** A ~3B model asked "what's 15% of 4,200" answers
+  confidently and is under no obligation to be right; `NSExpression` either evaluates or it
+  does not, and the model never sees the question. Two things worth keeping:
+  `NSExpression` **throws Objective-C exceptions** on malformed input rather than returning
+  nil, which Swift cannot catch — so input is validated to digits and operators *before* it is
+  handed over, and that check is the safety rather than a nicety. And a conversion checks that
+  both units are the same `Dimension`, because kilograms into kilometres is a category error
+  that `Measurement` would happily produce a number for.
+
+  Every reckoning branch requires a **digit** as well as its keyword, which is what keeps
+  "what percentage of people agree" and "how far is the moon" out.
+
+  **A timer is a local notification, not a countdown**, because that is the only design that
+  survives being backgrounded — which is where a phone spends most of its life. It reuses the
+  notifier reminders already have, so it cost about forty lines.
+
+  Routing truth table is now **81 cases**.
+
+  **Stage 9b — screenshot offer, business cards, live translation, share extension, widget —
+  is not started.**
 
 ### D-18 is now probably unreachable — do not delete it, do not trust it
 

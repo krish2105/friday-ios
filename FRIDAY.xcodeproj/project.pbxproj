@@ -62,6 +62,8 @@
 		AA0000000000000000000862 /* StatusHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000762 /* StatusHeader.swift */; };
 		AA0000000000000000000863 /* CapabilitiesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000763 /* CapabilitiesSheet.swift */; };
 		AA0000000000000000000864 /* HeroPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000764 /* HeroPanel.swift */; };
+		AA0000000000000000000865 /* ReckonTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000765 /* ReckonTool.swift */; };
+		AA0000000000000000000866 /* TimerTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000766 /* TimerTool.swift */; };
 		AA0000000000000000000840 /* Intent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000740 /* Intent.swift */; };
 		AA0000000000000000000830 /* FridayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071F /* FridayAttributes.swift */; };
 		AA0000000000000000000831 /* FridayLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000721 /* FridayLiveActivity.swift */; };
@@ -122,6 +124,8 @@
 		AA0000000000000000000762 /* StatusHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusHeader.swift; sourceTree = "<group>"; };
 		AA0000000000000000000763 /* CapabilitiesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapabilitiesSheet.swift; sourceTree = "<group>"; };
 		AA0000000000000000000764 /* HeroPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroPanel.swift; sourceTree = "<group>"; };
+		AA0000000000000000000765 /* ReckonTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReckonTool.swift; sourceTree = "<group>"; };
+		AA0000000000000000000766 /* TimerTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerTool.swift; sourceTree = "<group>"; };
 		AA0000000000000000000740 /* Intent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intent.swift; sourceTree = "<group>"; };
 		AA0000000000000000000702 /* FridayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayState.swift; sourceTree = "<group>"; };
 		AA0000000000000000000703 /* FridayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayEngine.swift; sourceTree = "<group>"; };
@@ -277,6 +281,8 @@
 				AA000000000000000000071C /* ReminderTool.swift */,
 				AA0000000000000000000756 /* ContactTool.swift */,
 				AA0000000000000000000758 /* MotionTool.swift */,
+				AA0000000000000000000765 /* ReckonTool.swift */,
+				AA0000000000000000000766 /* TimerTool.swift */,
 			);
 			path = Tools;
 			sourceTree = "<group>";
@@ -467,6 +473,8 @@
 				AA0000000000000000000862 /* StatusHeader.swift in Sources */,
 				AA0000000000000000000863 /* CapabilitiesSheet.swift in Sources */,
 				AA0000000000000000000864 /* HeroPanel.swift in Sources */,
+				AA0000000000000000000865 /* ReckonTool.swift in Sources */,
+				AA0000000000000000000866 /* TimerTool.swift in Sources */,
 				AA0000000000000000000841 /* AskFridayIntent.swift in Sources */,
 				AA0000000000000000000842 /* StartListeningIntent.swift in Sources */,
 				AA0000000000000000000803 /* FridayEngine.swift in Sources */,

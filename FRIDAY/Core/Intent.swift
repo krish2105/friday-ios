@@ -30,6 +30,12 @@ enum Intent: Equatable {
     case motion(aspect: MotionTool.Aspect, dayOffset: Int)
     /// "How do you say ‹phrase› in ‹language›." `code` is a language code.
     case translate(phrase: String, code: String)
+    /// "Set a timer for ten minutes."
+    case timer(seconds: Int)
+    /// Arithmetic, a percentage or a unit conversion — worked out in Swift.
+    case reckon(ReckonTool.Sum)
+    /// "What's on my clipboard."
+    case clipboard
     /// Read whatever he's about to show me. Nothing to look up here — the image
     /// comes from the UI, so `FridayEngine.scan` does the work.
     case scan(source: ScanSource)
@@ -66,6 +72,24 @@ enum Router {
         // otherwise be answered with the time.
         if let translation = translationRequest(in: input) {
             return translation
+        }
+
+        // Before reminders: "set a timer for ten minutes" is not a reminder, but
+        // it is close enough in shape that the reminder needles would take it.
+        if contains(text, ["set a timer", "start a timer", "timer for", "time me for"]) {
+            guard let seconds = TimerTool.seconds(in: text) else {
+                // A timer with no duration is a question, not a failure.
+                return .chat
+            }
+            return .timer(seconds: seconds)
+        }
+
+        if contains(text, ["clipboard", "what did i copy", "what i copied", "paste"]) {
+            return .clipboard
+        }
+
+        if let sum = reckoning(in: text) {
+            return .reckon(sum)
         }
 
         // Writing to the calendar is checked before *reading* it, because
@@ -200,6 +224,76 @@ enum Router {
             return .library
         }
         return .camera
+    }
+
+    // MARK: - Reckoning
+
+    /// A sum, a percentage or a conversion — or nil, which is most sentences.
+    ///
+    /// Every branch requires a **digit** as well as its keyword, which is what
+    /// keeps "what percentage of people agree" and "how far is the moon" out.
+    /// A question about arithmetic is not a sum.
+    private static func reckoning(in text: String) -> ReckonTool.Sum? {
+        guard text.rangeOfCharacter(from: .decimalDigits) != nil else { return nil }
+
+        // "15% of 4200", "15 percent of 4200"
+        if let percent = number(before: ["%", " percent", " per cent"], in: text),
+           let range = text.range(of: " of "),
+           let total = firstNumber(in: String(text[range.upperBound...])) {
+            return .percentage(percent, of: total)
+        }
+
+        // "12 miles in km", "convert 5 kg to pounds"
+        for separator in [" in ", " to ", " into "] {
+            guard let range = text.range(of: separator) else { continue }
+            let left = String(text[text.startIndex..<range.lowerBound])
+            let right = String(text[range.upperBound...])
+
+            if let value = firstNumber(in: left),
+               let from = lastWord(in: left), ReckonTool.unit(named: from) != nil,
+               let to = firstWord(in: right), ReckonTool.unit(named: to) != nil {
+                return .convert(value, from: from, to: to)
+            }
+        }
+
+        // A bare sum. Requires an operator so a sentence containing a number is
+        // never mistaken for one.
+        if contains(text, ["what's ", "whats ", "what is ", "calculate ", "how much is "]),
+           text.contains(where: { "+*/×÷".contains($0) })
+            || (text.contains("-") && text.contains(where: \.isNumber)) {
+            let expression = text
+                .replacingOccurrences(of: "×", with: "*")
+                .replacingOccurrences(of: "÷", with: "/")
+                .drop { !($0.isNumber || $0 == "(" || $0 == "-") }
+            if ReckonTool.evaluate(String(expression)) != nil {
+                return .arithmetic(String(expression))
+            }
+        }
+
+        return nil
+    }
+
+    private static func firstNumber(in text: String) -> Double? {
+        let digits = text.drop { !$0.isNumber }.prefix { $0.isNumber || $0 == "." || $0 == "," }
+        return Double(digits.replacingOccurrences(of: ",", with: ""))
+    }
+
+    private static func number(before markers: [String], in text: String) -> Double? {
+        for marker in markers {
+            guard let range = text.range(of: marker) else { continue }
+            let before = text[text.startIndex..<range.lowerBound]
+            let digits = before.reversed().prefix { $0.isNumber || $0 == "." }.reversed()
+            if let value = Double(String(digits)) { return value }
+        }
+        return nil
+    }
+
+    private static func firstWord(in text: String) -> String? {
+        text.split(separator: " ").first.map(String.init)
+    }
+
+    private static func lastWord(in text: String) -> String? {
+        text.split(separator: " ").last.map(String.init)
     }
 
     // MARK: - Translation
@@ -474,6 +568,20 @@ enum Lookup {
 
             case .motion(let aspect, let dayOffset):
                 return await MotionTool.answer(aspect: aspect, dayOffset: dayOffset)
+
+            case .reckon(let sum):
+                // Computed, never recalled. D-44 at its cleanest: a model asked
+                // "what's 15% of 4,200" answers confidently and is under no
+                // obligation to be right.
+                return ReckonTool.answer(sum)
+
+            case .clipboard:
+                return ClipboardTool.answer()
+
+            case .timer:
+                // Handled by the engine, which owns the notifier. Only Siri
+                // reaches this.
+                return "I'll set that in the app, boss."
 
             case .translate:
                 // Only Siri arrives here, for the same reason as `.scan` below:

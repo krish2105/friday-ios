@@ -293,6 +293,25 @@ final class FridayEngine {
             return
         }
 
+        // A timer is a local notification rather than a countdown the app has to
+        // stay alive to run — the only design that survives being backgrounded,
+        // which is where a phone spends most of its life. It reuses the notifier
+        // reminders already have.
+        if case .timer(let seconds) = intent {
+            let due = Date().addingTimeInterval(TimeInterval(seconds))
+            let spoken = TimerTool.spoken(seconds)
+            let set = await notifier.nudge("your \(spoken) timer is up", at: due)
+
+            let line = set
+                ? "Timer set for \(spoken), boss."
+                : "I need notifications switched on to time that, boss. They're in Settings, under FRIDAY."
+            conversation[replyIndex].text = await voiced(line, factual: true)
+            conversation[replyIndex].tone = set ? "calm" : "concerned"
+            Haptics.replyReceived()
+            await deliver(conversation[replyIndex].text)
+            return
+        }
+
         if case .scan(let source) = intent {
             let answer = await voiced(await raiseScanner(source), factual: false)
             conversation[replyIndex].text = answer
