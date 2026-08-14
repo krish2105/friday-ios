@@ -44,6 +44,7 @@
 		AA0000000000000000000881 /* TimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000780 /* TimerAttributes.swift */; };
 		AA0000000000000000000882 /* TimerActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000781 /* TimerActivityController.swift */; };
 		AA0000000000000000000883 /* FridayTimerActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000782 /* FridayTimerActivity.swift */; };
+		AA0000000000000000000884 /* FridayActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000783 /* FridayActions.swift */; };
 		AA0000000000000000000870 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000770 /* ShareViewController.swift */; };
 		AA0000000000000000000871 /* SharedTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000771 /* SharedTextView.swift */; };
 		AA0000000000000000000872 /* TextScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000750 /* TextScanner.swift */; };
@@ -124,6 +125,7 @@
 		AA0000000000000000000780 /* TimerAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerAttributes.swift; sourceTree = "<group>"; };
 		AA0000000000000000000781 /* TimerActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerActivityController.swift; sourceTree = "<group>"; };
 		AA0000000000000000000782 /* FridayTimerActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayTimerActivity.swift; sourceTree = "<group>"; };
+		AA0000000000000000000783 /* FridayActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayActions.swift; sourceTree = "<group>"; };
 		AA0000000000000000000770 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		AA0000000000000000000771 /* SharedTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedTextView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000772 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -363,6 +365,7 @@
 				AA0000000000000000000741 /* AskFridayIntent.swift */,
 				AA0000000000000000000742 /* StartListeningIntent.swift */,
 				AA000000000000000000075F /* FridaySnippet.swift */,
+				AA0000000000000000000783 /* FridayActions.swift */,
 			);
 			path = Intents;
 			sourceTree = "<group>";
@@ -567,6 +570,7 @@
 				AA0000000000000000000867 /* CardReader.swift in Sources */,
 				AA0000000000000000000880 /* TimerAttributes.swift in Sources */,
 				AA0000000000000000000882 /* TimerActivityController.swift in Sources */,
+				AA0000000000000000000884 /* FridayActions.swift in Sources */,
 				AA0000000000000000000841 /* AskFridayIntent.swift in Sources */,
 				AA0000000000000000000842 /* StartListeningIntent.swift in Sources */,
 				AA0000000000000000000803 /* FridayEngine.swift in Sources */,

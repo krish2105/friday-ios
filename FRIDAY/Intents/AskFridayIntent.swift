@@ -105,6 +105,16 @@ struct AskFridayIntent: AppIntent {
 /// This is a platform limit, documented rather than worked around — the same
 /// call the README makes about always-on wake words.
 struct FridayShortcuts: AppShortcutsProvider {
+    /// Several phrasings each, deliberately.
+    ///
+    /// Spotlight and Siri match on these strings, so a capability is findable
+    /// exactly as far as its phrasings reach — the same truth D-43's keyword
+    /// routing has inside the app, surfacing again at the system level. One
+    /// phrase per action would make each of these discoverable only by someone
+    /// who guessed the wording.
+    ///
+    /// Every phrase must contain `\(.applicationName)`; App Intents rejects any
+    /// that does not.
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
             intent: AskFridayIntent(),
@@ -115,6 +125,53 @@ struct FridayShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Ask FRIDAY",
             systemImageName: "waveform.circle"
+        )
+        AppShortcut(
+            intent: StepsIntent(),
+            phrases: [
+                "\(.applicationName) steps",
+                "How far have I walked with \(.applicationName)",
+                "My step count in \(.applicationName)"
+            ],
+            shortTitle: "Today's Steps",
+            systemImageName: "figure.walk"
+        )
+        AppShortcut(
+            intent: TodayIntent(),
+            phrases: [
+                "What's on today in \(.applicationName)",
+                "\(.applicationName) my day",
+                "My schedule in \(.applicationName)"
+            ],
+            shortTitle: "What's On Today",
+            systemImageName: "calendar"
+        )
+        AppShortcut(
+            intent: DeviceIntent(),
+            phrases: [
+                "Check this phone with \(.applicationName)",
+                "\(.applicationName) battery"
+            ],
+            shortTitle: "Check This Phone",
+            systemImageName: "battery.75"
+        )
+        AppShortcut(
+            intent: TranslateIntent(),
+            phrases: [
+                "Translate with \(.applicationName)",
+                "\(.applicationName) translate this"
+            ],
+            shortTitle: "Translate",
+            systemImageName: "character.bubble"
+        )
+        AppShortcut(
+            intent: ReckonIntent(),
+            phrases: [
+                "Work it out with \(.applicationName)",
+                "\(.applicationName) calculate"
+            ],
+            shortTitle: "Work It Out",
+            systemImageName: "percent"
         )
     }
 }
