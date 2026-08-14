@@ -60,11 +60,9 @@ final class LanguageEngine {
     /// question should give the same answer, and a wrong-but-fluent reply is
     /// the worst outcome here.
     ///
-    /// This also makes the persona and tool-routing rules bind harder, since
-    /// the model stops exploring low-probability continuations that ignore
-    /// them. `maximumResponseTokens` is a backstop against runaway generation;
-    /// it sits well above the ~3-sentence target so it never truncates a real
-    /// reply mid-sentence and leaves TTS reading a fragment.
+    /// This also makes the persona rules bind harder, since the model stops
+    /// exploring low-probability continuations that ignore them.
+    ///
     /// No `maximumResponseTokens`. It was here as a backstop and it caused a
     /// real failure: guided generation has to emit a COMPLETE structured value,
     /// so a cap that lands mid-structure leaves `spoken` nil, `respond` throws
@@ -75,7 +73,7 @@ final class LanguageEngine {
 
     init(reminders: ReminderService) {
         self.reminders = reminders
-        session = Self.makeSession(reminders: reminders)
+        session = Self.makeSession()
     }
 
     // MARK: - Session
@@ -107,18 +105,24 @@ final class LanguageEngine {
     /// flip this the day the account is upgraded and the capability is enabled.
     private static let weatherIsUsable = false
 
-    private static func makeSession(reminders: ReminderService) -> LanguageModelSession {
-        var tools: [any Tool] = [
-            TimeTool(),
-            DeviceTool(),
-            CalendarTool(),
-            ReminderTool(service: reminders)
-        ]
-        if weatherIsUsable {
-            tools.append(WeatherTool())
-        }
-
-        return LanguageModelSession(tools: tools) {
+    /// No tools. This session only ever handles conversational turns.
+    ///
+    /// `Router` decides in Swift whether a turn needs a lookup and runs the
+    /// tool itself, so anything reaching the model needs nothing looked up.
+    /// Registering tools here would only let the model fire one on a chat turn
+    /// — which is exactly what it did, answering "what can you do" with the
+    /// battery level.
+    ///
+    /// It also hands the persona and the conversation the entire ~4,096 token
+    /// budget that four tool schemas used to share (D-36), so context overflow
+    /// arrives much later.
+    ///
+    /// `WeatherTool`, `TimeTool`, `DeviceTool`, `CalendarTool` and
+    /// `ReminderTool` all still conform to `Tool` and are unchanged, so
+    /// re-registering them is a one-line change if the model ever gets good
+    /// enough to route for itself.
+    private static func makeSession() -> LanguageModelSession {
+        LanguageModelSession {
             FridayPersona.instructions
         }
     }
@@ -141,7 +145,7 @@ final class LanguageEngine {
     /// Fresh session with the persona intact. History is dropped; the last
     /// exchange is re-seeded into the next prompt.
     private func resetPreservingPersona() {
-        session = Self.makeSession(reminders: reminders)
+        session = Self.makeSession()
         if let last = lastExchange {
             pendingCarryOver = """
             For context, boss said earlier: "\(last.boss)" and you replied: \
