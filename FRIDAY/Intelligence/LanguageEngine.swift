@@ -65,10 +65,13 @@ final class LanguageEngine {
     /// them. `maximumResponseTokens` is a backstop against runaway generation;
     /// it sits well above the ~3-sentence target so it never truncates a real
     /// reply mid-sentence and leaves TTS reading a fragment.
-    private static let generation = GenerationOptions(
-        sampling: .greedy,
-        maximumResponseTokens: 256
-    )
+    /// No `maximumResponseTokens`. It was here as a backstop and it caused a
+    /// real failure: guided generation has to emit a COMPLETE structured value,
+    /// so a cap that lands mid-structure leaves `spoken` nil, `respond` throws
+    /// "Empty reply", and FRIDAY says "Something went sideways, boss" for what
+    /// was actually a perfectly good turn. The @Guide already asks for under
+    /// three sentences; that is the right place to bound length.
+    private static let generation = GenerationOptions(sampling: .greedy)
 
     init(reminders: ReminderService) {
         self.reminders = reminders
@@ -103,6 +106,21 @@ final class LanguageEngine {
         ) {
             FridayPersona.instructions
         }
+    }
+
+    /// Let go of a turn the engine gave up waiting for.
+    ///
+    /// When `FridayEngine`'s deadline abandons a turn, the stranded task still
+    /// holds `isResponding` and still owns the session. Without this, the very
+    /// next turn fails its `!isResponding` guard, or the framework reports
+    /// concurrent requests — either way the user gets "Something went sideways,
+    /// boss" on a turn that would have been fine. The session is rebuilt
+    /// because whatever the abandoned request left in it cannot be trusted.
+    func abandonInFlight() {
+        guard isResponding else { return }
+        isResponding = false
+        partialSpoken = ""
+        resetPreservingPersona()
     }
 
     /// Fresh session with the persona intact. History is dropped; the last

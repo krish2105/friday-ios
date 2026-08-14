@@ -209,11 +209,13 @@ final class FridayEngine {
                 if await gate.claim() { continuation.resume(returning: outcome) }
             }
 
-            Task {
+            Task { [language] in
                 try? await Task.sleep(for: .seconds(20))
-                if await gate.claim() {
-                    continuation.resume(returning: .failure(LanguageEngineFailure.timedOut))
-                }
+                guard await gate.claim() else { return }
+                // The abandoned task still holds `isResponding` and still owns
+                // the session, so without this the NEXT turn fails too.
+                await language.abandonInFlight()
+                continuation.resume(returning: .failure(LanguageEngineFailure.timedOut))
             }
         }
     }
