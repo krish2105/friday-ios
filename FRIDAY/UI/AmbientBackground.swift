@@ -27,6 +27,15 @@ struct AmbientBackground: View {
             blob(accent.opacity(0.14), size: 320)
                 .offset(x: drift ? 130 : 50, y: drift ? -40 : 30)
         }
+        // Load-bearing. The blobs have fixed frames up to 470pt, and a ZStack
+        // sizes to its largest child — so without this the background reported
+        // 470pt wide on a 393pt screen. ContentView's outer ZStack adopted that
+        // width and centred the interface inside it, clipping ~38pt off every
+        // edge: the header, every bubble and the footer were all cut off.
+        //
+        // This pins the reported size to whatever is proposed. The blobs still
+        // render past the bounds, which is the intended soft bleed.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 0.9), value: accent)
         .onAppear(perform: startDrift)
