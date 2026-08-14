@@ -24,8 +24,6 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            AmbientBackground(accent: accent)
-
             VStack(spacing: 0) {
                 header
                     .reveal(appeared, delay: 0.05)
@@ -84,6 +82,17 @@ struct ContentView: View {
             .padding(.bottom, 24)
             .frame(maxWidth: 560)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // The ambient field is a BACKGROUND, not a ZStack sibling. As a sibling
+        // it sized the stack: its blobs have fixed frames up to 470pt, a ZStack
+        // sizes to its largest child, and measuring on device confirmed the
+        // root container was 470pt wide on a 402pt screen — so the whole
+        // interface was laid out 470pt wide and clipped ~34pt at each edge.
+        //
+        // `.background` is proposed the primary view's size and can never grow
+        // it, so this cannot regress. Capping the blobs inside AmbientBackground
+        // was not enough; the containment has to be here.
+        .background { AmbientBackground(accent: accent) }
         .onAppear {
             appeared = true
             pulsing = true
