@@ -43,6 +43,11 @@ enum ScanSource: Equatable {
     case camera
     /// It's already on the phone.
     case library
+    /// It's a file — a PDF in Files, iCloud Drive, or an attachment saved off.
+    case files
+    /// A code or a sign in the world. Live viewfinder, tap what you mean —
+    /// no shutter, no page edges, because neither applies to a QR sticker.
+    case live
 }
 
 enum Router {
@@ -92,8 +97,20 @@ enum Router {
         // failure than falling through to chat.
         if contains(text, ["read this", "read that", "read it", "scan this", "scan that",
                            "what does this say", "what does that say", "what does it say",
-                           "what's this say", "whats this say", "what's it say", "whats it say"]) {
+                           "what's this say", "whats this say", "what's it say", "whats it say",
+                           "what's this code", "whats this code", "scan a code", "scan the code",
+                           "read this pdf", "open this pdf"]) {
             return .scan(source: scanSource(in: text))
+        }
+
+        // A code gets its own rule because it is asked about in ways that dodge
+        // both of the others: "what's this QR code" has a noun wedged in *and*
+        // no "say" to anchor on. The noun is specific enough to route on when
+        // paired with an asking word — nobody says "barcode" in passing.
+        if contains(text, ["qr code", "qr-code", "barcode", "bar code"]),
+           contains(text, ["this", "that", "scan", "read", "what"]),
+           !contains(text, ["what is a", "what's a", "whats a", "how does a"]) {
+            return .scan(source: .live)
         }
 
         // The same question with a noun wedged into it — "what does this receipt
@@ -168,11 +185,21 @@ enum Router {
     /// a picture of this and read it" to the photo library, which is the exact
     /// opposite of what was asked.
     private static func scanSource(in text: String) -> ScanSource {
-        contains(text, ["this photo", "that photo", "this picture", "that picture",
-                        "this screenshot", "that screenshot", "this image", "that image",
-                        "my photos", "camera roll", "photo library"])
-            ? .library
-            : .camera
+        // A code is live: it is stuck to something in the world, and a shutter
+        // plus perspective correction would only get in the way.
+        if contains(text, ["qr code", "qr", "barcode", "bar code", "this code", "that code"]) {
+            return .live
+        }
+        if contains(text, ["pdf", "this file", "that file", "this document",
+                           "that document", "in files"]) {
+            return .files
+        }
+        if contains(text, ["this photo", "that photo", "this picture", "that picture",
+                           "this screenshot", "that screenshot", "this image", "that image",
+                           "my photos", "camera roll", "photo library"]) {
+            return .library
+        }
+        return .camera
     }
 
     // MARK: - Translation

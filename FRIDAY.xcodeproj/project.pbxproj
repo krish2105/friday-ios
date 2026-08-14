@@ -52,6 +52,9 @@
 		AA0000000000000000000858 /* MotionTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000758 /* MotionTool.swift */; };
 		AA0000000000000000000859 /* Tongues.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000759 /* Tongues.swift */; };
 		AA000000000000000000085A /* BoardingPassReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000075A /* BoardingPassReader.swift */; };
+		AA000000000000000000085B /* BarcodeReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000075B /* BarcodeReader.swift */; };
+		AA000000000000000000085C /* LiveScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000075C /* LiveScanner.swift */; };
+		AA000000000000000000085D /* PDFReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000075D /* PDFReader.swift */; };
 		AA0000000000000000000840 /* Intent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000740 /* Intent.swift */; };
 		AA0000000000000000000830 /* FridayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071F /* FridayAttributes.swift */; };
 		AA0000000000000000000831 /* FridayLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000721 /* FridayLiveActivity.swift */; };
@@ -102,6 +105,9 @@
 		AA0000000000000000000758 /* MotionTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionTool.swift; sourceTree = "<group>"; };
 		AA0000000000000000000759 /* Tongues.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tongues.swift; sourceTree = "<group>"; };
 		AA000000000000000000075A /* BoardingPassReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardingPassReader.swift; sourceTree = "<group>"; };
+		AA000000000000000000075B /* BarcodeReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeReader.swift; sourceTree = "<group>"; };
+		AA000000000000000000075C /* LiveScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveScanner.swift; sourceTree = "<group>"; };
+		AA000000000000000000075D /* PDFReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFReader.swift; sourceTree = "<group>"; };
 		AA0000000000000000000740 /* Intent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intent.swift; sourceTree = "<group>"; };
 		AA0000000000000000000702 /* FridayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayState.swift; sourceTree = "<group>"; };
 		AA0000000000000000000703 /* FridayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayEngine.swift; sourceTree = "<group>"; };
@@ -280,6 +286,9 @@
 				AA0000000000000000000751 /* DocumentCamera.swift */,
 				AA0000000000000000000754 /* ReceiptReader.swift */,
 				AA000000000000000000075A /* BoardingPassReader.swift */,
+				AA000000000000000000075B /* BarcodeReader.swift */,
+				AA000000000000000000075C /* LiveScanner.swift */,
+				AA000000000000000000075D /* PDFReader.swift */,
 			);
 			path = Vision;
 			sourceTree = "<group>";
@@ -427,6 +436,9 @@
 				AA0000000000000000000858 /* MotionTool.swift in Sources */,
 				AA0000000000000000000859 /* Tongues.swift in Sources */,
 				AA000000000000000000085A /* BoardingPassReader.swift in Sources */,
+				AA000000000000000000085B /* BarcodeReader.swift in Sources */,
+				AA000000000000000000085C /* LiveScanner.swift in Sources */,
+				AA000000000000000000085D /* PDFReader.swift in Sources */,
 				AA0000000000000000000841 /* AskFridayIntent.swift in Sources */,
 				AA0000000000000000000842 /* StartListeningIntent.swift in Sources */,
 				AA0000000000000000000803 /* FridayEngine.swift in Sources */,

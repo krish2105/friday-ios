@@ -83,6 +83,11 @@ struct ContentView: View {
                     .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85),
                                value: engine.contacts.pendingCall)
 
+                linkConfirm
+                    .padding(.bottom, 12)
+                    .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85),
+                               value: engine.pendingLink)
+
                 errorBanner
                     .padding(.bottom, 12)
                     .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85),
@@ -170,6 +175,39 @@ struct ContentView: View {
                 Task { await engine.scan(pages) }
             }
             .ignoresSafeArea()
+        }
+        // PDFs only. The picker hands back a security-scoped URL, which
+        // `PDFReader` opens explicitly — no entitlement, and the app never sees
+        // anything but the one file he chose.
+        .fileImporter(isPresented: $engine.showFilePicker,
+                      allowedContentTypes: [.pdf]) { result in
+            guard case .success(let url) = result else { return }
+            Task { await engine.readFile(url) }
+        }
+        // Full screen, like the document camera: a viewfinder you are aiming at
+        // something in the world needs the whole screen to aim with.
+        .fullScreenCover(isPresented: $engine.showLiveScanner) {
+            LiveScanner(
+                onRecognise: { payload, isCode in
+                    Task { await engine.liveRecognised(payload, isCode: isCode) }
+                },
+                onCancel: { engine.showLiveScanner = false }
+            )
+            .ignoresSafeArea()
+            .overlay(alignment: .topTrailing) {
+                // The system scanner has no chrome of its own, so without this
+                // there is no way out but the app switcher.
+                Button {
+                    engine.showLiveScanner = false
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 40, height: 40)
+                        .background(Circle().fill(.black.opacity(0.55)))
+                }
+                .padding(20)
+            }
         }
     }
 
@@ -366,6 +404,28 @@ struct ContentView: View {
                         openURL(url)
                     }
                     engine.contacts.cancelCall()
+                }
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var linkConfirm: some View {
+        if let url = engine.pendingLink {
+            ConfirmCard(
+                icon: "qrcode.viewfinder",
+                heading: "OPEN THIS LINK?",
+                title: url.host() ?? "Unknown site",
+                // The **whole** address, not a tidied version of it. A QR code
+                // is untrusted input from the physical world, and the only
+                // defence against one pointing somewhere it should not is being
+                // able to read where it actually goes before pressing anything.
+                detail: url.absoluteString,
+                confirmTitle: "Open",
+                onCancel: { engine.cancelLink() },
+                onConfirm: {
+                    openURL(url)
+                    engine.cancelLink()
                 }
             )
         }

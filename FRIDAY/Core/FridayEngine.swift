@@ -46,6 +46,20 @@ final class FridayEngine {
     /// `private(set)` — dismissing either has to be able to lower its own flag.
     var showPhotoPicker = false
     var showCamera = false
+    var showFilePicker = false
+    var showLiveScanner = false
+
+    /// A link found in a code, waiting on a press.
+    ///
+    /// Staged rather than opened. A QR code is untrusted input from the physical
+    /// world — anyone can print a sticker and put it on a parking meter — so the
+    /// full address goes on a card to be read before anything happens. D-34's
+    /// rule against an unattended write, applied to an unattended *navigation*.
+    private(set) var pendingLink: URL?
+
+    func cancelLink() {
+        pendingLink = nil
+    }
 
     let audioSession = AudioSessionManager()
     let speech = SpeechInput()
@@ -391,6 +405,21 @@ final class FridayEngine {
     /// scanner is unsupported — the Simulator, mostly, where a black screen and
     /// no explanation would be the worst of both.
     private func raiseScanner(_ source: ScanSource) async -> String {
+        if source == .files {
+            showFilePicker = true
+            return "Point me at it, boss."
+        }
+
+        // Live and document capture both need the camera, and both fall back to
+        // the photo library rather than presenting a black rectangle.
+        if source == .live, LiveScanner.isAvailable {
+            guard await AVCaptureDevice.requestAccess(for: .video) else {
+                return "Camera access is off, boss. Turn it back on in Settings → FRIDAY → Camera."
+            }
+            showLiveScanner = true
+            return "Point it at the code, boss."
+        }
+
         guard source == .camera, DocumentCamera.isAvailable else {
             showPhotoPicker = true
             return "Show me, boss."
@@ -405,6 +434,67 @@ final class FridayEngine {
 
         showCamera = true
         return "Hold it steady, boss."
+    }
+
+    /// A code's contents, said out loud and — if it is a link — staged.
+    private func report(code payload: String) async {
+        let classified = BarcodeReader.classify(payload)
+        if case .link(let url) = classified { pendingLink = url }
+
+        let line = await voiced(BarcodeReader.sentence(for: classified), factual: true)
+        conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
+        Haptics.replyReceived()
+        await deliver(line)
+    }
+
+    /// Something tapped in the live viewfinder — a code, or a line of text.
+    func liveRecognised(_ payload: String, isCode: Bool) async {
+        showLiveScanner = false
+
+        if state == .speaking {
+            voice.stop()
+            state = .idle
+        }
+        guard state == .idle else { return }
+        state = .thinking
+
+        if isCode {
+            await report(code: payload)
+            return
+        }
+
+        // Plain text off a sign. Short by nature, so it is read straight back
+        // rather than summarised — the whole point was to know what it said.
+        let line = await voiced("It says: \(payload)", factual: true)
+        conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
+        Haptics.replyReceived()
+        await deliver(line)
+    }
+
+    /// A PDF chosen from Files.
+    func readFile(_ url: URL) async {
+        if state == .speaking {
+            voice.stop()
+            state = .idle
+        }
+        guard state == .idle else { return }
+
+        showFilePicker = false
+        alert = nil
+        state = .thinking
+
+        do {
+            let text = try await PDFReader.text(in: url)
+            await present(scanned: text)
+        } catch {
+            let line = (error as? PDFReader.PDFError)?.errorDescription
+                ?? (error as? TextScanner.ScanError)?.errorDescription
+                ?? "That file wouldn't read, boss."
+            let spoken = await voiced(Lookup.addressed(line), factual: false)
+            conversation.append(ConversationTurn(speaker: .friday, text: spoken, tone: "concerned"))
+            Haptics.failed()
+            await deliver(spoken)
+        }
     }
 
     /// Text recognised from a picked image, answered like any other turn.
@@ -434,6 +524,14 @@ final class FridayEngine {
         alert = nil
         state = .thinking
 
+        // A code found in a still beats reading the page it is printed on. The
+        // code *is* the content — a parcel label's whole point is the tracking
+        // number, not the courier's address in six-point type.
+        if let payload = await BarcodeReader.codes(in: pages).first {
+            await report(code: payload)
+            return
+        }
+
         let text: String
         do {
             text = try await TextScanner.text(in: pages)
@@ -452,6 +550,17 @@ final class FridayEngine {
             return
         }
 
+        await present(scanned: text)
+    }
+
+    /// What to do with recognised text, whatever produced it.
+    ///
+    /// Extracted so a **PDF is answered exactly as a photograph is** — receipt
+    /// extraction, boarding pass, read-aloud or summary. A file having arrived
+    /// through Files rather than a camera changes nothing about what should
+    /// happen to the words in it, and duplicating this would have let the two
+    /// paths drift apart.
+    private func present(scanned text: String) async {
         // A receipt is worth more than a summary of a receipt, so it gets first
         // refusal. Three gates, and any of them declining costs nothing but the
         // ordinary summary below: Swift decides it looks like a receipt at all,

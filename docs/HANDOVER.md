@@ -1,6 +1,6 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-45, D-53–D-59, §10)
+**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-45, D-53–D-60, §10)
 **Repo state:** `main`, stage 3 landed at `15bca6f` · **Commits:** 47
 
 This replaces the previous handover, which was written by a cloud session with no Swift
@@ -92,7 +92,7 @@ session was diagnosed this way in about a minute.
 
 ## 3. What is built
 
-46 Swift files across two targets.
+49 Swift files across two targets.
 
 | Dir | Files | Contents |
 |---|---|---|
@@ -104,7 +104,7 @@ session was diagnosed this way in about a minute.
 | `UI/` | 9 | `ContentView`, `ConversationView`, `OrbView`, `TalkButton`, `SettingsView`, `AmbientBackground`, `GlassSurface`, `FridayTheme`, `Haptics` |
 | `LiveActivity/` | 3 | `FridayAttributes`, `LiveActivityController`, `FridayLiveActivity` |
 | `Intents/` | 2 | `AskFridayIntent` (+ `FridayAnswer`, `FridayShortcuts`), `StartListeningIntent` |
-| `Vision/` | 4 | `TextScanner`, `DocumentCamera`, `ReceiptReader`, `BoardingPassReader` |
+| `Vision/` | 7 | `TextScanner`, `DocumentCamera`, `ReceiptReader`, `BoardingPassReader`, `BarcodeReader`, `LiveScanner`, `PDFReader` |
 | `Language/` | 3 | `Bilingual`, `Translator`, `Tongues` |
 | `Notify/` | 1 | `FridayNotifier` |
 | `FridayActivity/` | 3 | `FridayActivityBundle` (`@main`), `FridayListenControl`, `FridayLockWidget` |
@@ -555,6 +555,50 @@ The old §8 still stands except where noted. New decisions from device work:
   had to leave the travel-word list because a card receipt prints "Terminal ID".
 
   Routing truth table is now **58 cases**, all re-run every time.
+
+- **D-60 · Stage 6 — codes, files and a live viewfinder.** `ScanSource` grows from two to
+  four: `.camera`, `.library`, `.files`, `.live`. Free throughout — `fileImporter` hands back
+  a security-scoped URL and needs no entitlement, exactly as `PhotosPicker` needs no photo
+  permission.
+
+  **A QR code is untrusted input from the physical world**, and this is the security decision
+  in the stage. Anyone can print a sticker and put it on a parking meter, so nothing is
+  followed automatically. Three layers:
+
+  1. Only `http` and `https` with a real host become an openable link. `javascript:`,
+     `data:`, `file:`, `tel:` and custom app schemes are all reported as **plain text** —
+     tested, because a `data:` URL handed to the system is how a scanned code becomes a
+     script.
+  2. Opening is staged on a card showing the **whole** address, not a tidied host. Reading
+     where a link actually goes is the only defence there is, and a friendly name removes it.
+  3. A Wi-Fi code's password is parsed and **never spoken or shown**. Reading a password
+     aloud in a room is not a feature. The spoken line names the network only.
+
+  The spoken line names a link's **host**, not its address — reading a tracking-laden URL out
+  loud helps nobody, and the card carries the full thing for anyone who wants it.
+
+  **`LiveScanner` is not a duplicate of `DocumentCamera`**, and the split is by what you are
+  looking at. A page wants a shutter, edge detection and perspective correction; a QR sticker
+  or a shop sign wants none of the three and is hindered by all of them. Nothing is captured
+  until a tap — `didTapOn` is the only route out — so the viewfinder can be open without
+  reading anything, which is the right default for a camera pointed at the world. The system
+  scanner has no chrome, so the close button is ours or there is no way back.
+
+  **`PDFReader` tries the text layer first and OCR second, per page.** A born-digital invoice
+  carries its characters, and photographing them would discard perfect data to introduce OCR
+  errors into something that had none; a scan has no characters at all. Per page rather than
+  per document, because a signed contract is both. Pages are rendered at **2×** — 1× is about
+  72 dpi and below what recognition needs for body text — and capped at eight, since more
+  cannot fit the ~4,096 token budget anyway and refusing is honester than summarising the
+  first eight as though they were the whole document.
+
+  `FridayEngine.present(scanned:)` was extracted so **a PDF is answered exactly as a
+  photograph is** — receipt, boarding pass, read-aloud or summary. Where the words came from
+  should change nothing about what happens to them, and two copies would have drifted.
+
+  Routing truth table: **65 cases**. It caught "what's this QR code" falling through to chat —
+  that phrasing has a noun wedged in *and* no "say" to anchor on, so codes needed a rule of
+  their own.
 
 ### D-18 is now probably unreachable — do not delete it, do not trust it
 
