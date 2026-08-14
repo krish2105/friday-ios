@@ -47,6 +47,29 @@ The tradeoff is real: the on-device model is tuned for utility, not world knowle
 
 ---
 
+## System integration
+
+Three entry points. iOS does not permit a persistent background wake-word listener for
+third-party apps, and this app documents that constraint rather than faking it with
+background audio modes.
+
+- **Push-to-talk** — hold the orb.
+- **Siri / Shortcuts** — "Hey Siri, ask FRIDAY", then the question. The question cannot be
+  part of the phrase: App Intents only allows `AppEntity` and `AppEnum` parameters in a
+  spoken phrase, and an open question is neither.
+- **Control Centre / Lock Screen** — both open FRIDAY straight into listening. The Lock
+  Screen widget is a launcher rather than a display, because reading app data from a widget
+  needs an App Group, which requires a paid developer account.
+
+## Measured
+
+- **Idle CPU 2%** in a Release build on iPhone 16 Pro, against a 5% budget. Getting there
+  meant finding that Liquid Glass re-samples anything animating beneath it, so three
+  continuous idle animations had to stop — including the orb's resting pulse.
+- **Tool routing is done in Swift, not by the model.** The on-device ~3B model mis-routed
+  badly enough to answer "what can you do" with the battery level, so intent matching moved
+  into code and the model kept only conversational phrasing.
+
 ## Requirements
 
 - iPhone 15 Pro or newer (Foundation Models needs A17 Pro+)

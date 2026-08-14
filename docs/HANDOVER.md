@@ -1,6 +1,6 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Repo state:** `main` @ `fe37969` · **Commits:** 21
+**Written:** 2026-08-14 (rewritten) · **Repo state:** `main` @ `b16a92a` · **Commits:** 28
 
 This replaces the previous handover, which was written by a cloud session with no Swift
 toolchain. Everything it warned about has now been compiled, run on a physical iPhone 16 Pro,
@@ -91,7 +91,7 @@ session was diagnosed this way in about a minute.
 
 ## 3. What is built
 
-31 Swift files, 3,369 lines, across two targets.
+35 Swift files across two targets.
 
 | Dir | Files | Contents |
 |---|---|---|
@@ -102,9 +102,8 @@ session was diagnosed this way in about a minute.
 | `Tools/` | 6 | `FridayTool`, `TimeTool`, `DeviceTool`, `WeatherTool`, `CalendarTool`, `ReminderTool` |
 | `UI/` | 9 | `ContentView`, `ConversationView`, `OrbView`, `TalkButton`, `SettingsView`, `AmbientBackground`, `GlassSurface`, `FridayTheme`, `Haptics` |
 | `LiveActivity/` | 3 | `FridayAttributes`, `LiveActivityController`, `FridayLiveActivity` |
-| `FridayActivity/` | 1 | `FridayActivityBundle` — the extension's `@main` |
-
-`FRIDAY/Intents/` is still empty. That is Session 7.
+| `Intents/` | 2 | `AskFridayIntent` (+ `FridayAnswer`, `FridayShortcuts`), `StartListeningIntent` |
+| `FridayActivity/` | 3 | `FridayActivityBundle` (`@main`), `FridayListenControl`, `FridayLockWidget` |
 
 ### Per-session status
 
@@ -113,36 +112,35 @@ session was diagnosed this way in about a minute.
 | 1 — availability + app shell | ✅ | ✅ green "Ready" |
 | 2 — speech input | ✅ | ✅ live transcription, stable finals, repeated turns |
 | 3 — language engine + persona | ✅ | ✅ in character, says "boss" |
-| 4 — speech output | ✅ | ✅ speaks aloud · barge-in **untested** |
+| 4 — speech output | ✅ | ✅ speaks aloud, barge-in cuts off cleanly |
 | 5 — tools | ✅ | ✅ all four correct — but see §5, routing changed |
-| 6 — orb, haptics, Live Activity | ✅ | ⚠️ activity is created; never seen rendered |
-| 7 — App Intents, Siri, Control Centre | ❌ | ❌ |
+| 6 — orb, haptics, Live Activity | ✅ | ✅ Dynamic Island renders; idle CPU 2% in Release |
+| 7 — App Intents, Siri, Control Centre | ✅ | ✅ Siri speaks answers; control and widget both launch listening |
 | 8 — Phase 2 LiveKit bridge | ❌ out of scope | ❌ |
 
 ---
 
-## 4. Your mission
+## 4. Status
 
-Phase A (green build) and most of Phase B (device verification) are done. What remains:
+**Phases A, B and C are complete.** What remains:
 
 ### Still untested on device
 
-1. **Barge-in** — press the orb mid-sentence; should cut off cleanly and start listening.
-   Exercises D-27's guarded race, which has never run.
-2. **Ten turns in a row** — the context-overflow path (D-18). Note this is now *much* less
-   likely to trigger, because the session registers no tools and the persona has the whole
-   token budget.
-3. **Airplane mode** — transcription must still work. This is the headline portfolio claim.
-4. **Phone call mid-listen** — should stop cleanly and return to idle.
-5. **Idle CPU under 5%** — needs Instruments. Drove the orb's design (D-38), never measured.
-6. **Live Activity rendering** — see §7.
-7. **Apple Intelligence toggled off** — deliberately left until last: turning it off can
-   purge the models and force a multi-GB re-download that blocks everything else.
+1. **Apple Intelligence toggled off** — deliberately last: turning it off can purge
+   the models and force a multi-GB re-download that blocks everything else.
 
-### Then Phase C — Session 7
+Everything else in Sessions 1–6 passes on device, including barge-in, airplane mode, a
+phone call mid-listen, ten turns, the Dynamic Island, and idle CPU.
 
-Full spec in `docs/FRIDAY_iOS_Master_Build.md` §13. The `FridayActivity` extension already
-exists to hold the Lock Screen widget, and `FridayActivityBundle` is where it registers.
+### Phase C is complete
+
+App Intent, Siri shortcuts, Control Centre control and Lock Screen widget all built and
+verified. Two spec items could not be met as written — see D-51 and D-52.
+
+### Suggested next work
+
+Hardening (Router phrasings, the denied-permission paths), then either Session 8's LiveKit
+bridge or App Store preparation, which needs a paid account.
 
 ---
 
@@ -246,6 +244,9 @@ they are safe. That pattern is the fix; copy it.
 | `FridayLiveActivity.swift` | ❌ | ✅ |
 | `LiveActivityController.swift` | ✅ | ❌ |
 | `FridayActivityBundle.swift` | ❌ | ✅ |
+| `StartListeningIntent.swift` | ✅ | ✅ |
+| `FridayListenControl.swift` | ❌ | ✅ |
+| `FridayLockWidget.swift` | ❌ | ✅ |
 
 **`NSSupportsLiveActivities` IS honoured** as an `INFOPLIST_KEY_` build setting — verified
 `true` in the built Info.plist with `plutil`. The old §9.3 doubt is settled.
@@ -287,6 +288,27 @@ The old §8 still stands except where noted. New decisions from device work:
   no fix, it stays silent and no delegate method fires. Must be bounded at the source — no
   deadline upstream can rescue an unresumed continuation.
 
+- **D-50 · The resting orb does not breathe.** Release idle CPU went 8% → 6% → 2%
+  against a <5% budget. D-38 was right that `Canvas` was the enemy and its fix is
+  correct — no `Canvas` exists at idle — but it budgeted the orb in isolation and never
+  accounted for Liquid Glass, which re-samples whatever animates beneath it. `TalkButton`
+  wraps the orb in `.glassEffect`, so a permanently breathing orb meant permanently
+  re-blurring glass. Three continuous animations ran at idle, not one. Fixed in order: the
+  ambient field holds still at rest, the status chip's shadow is static, the resting orb is
+  frozen. **This contradicts Master Build §12's "idle: slow ambient breathing pulse"** —
+  the owner chose it over dropping `.interactive()` from the glass.
+- **D-51 · Siri cannot take the question in one utterance.** Interpolating the `String`
+  parameter into an `AppShortcut` phrase fails to build: *"AppEntity and AppEnum are the
+  only allowed types"*. So Master Build §13's "Hey Siri, ask FRIDAY what time it is" is not
+  achievable. "Ask FRIDAY" prompts for the question and speaks the answer. A fixed
+  `AppEnum` of canned questions would buy the one-shot phrasing at the cost of only ever
+  answering a hardcoded list.
+- **D-52 · The Lock Screen widget shows no timestamp.** A widget runs in its own process,
+  so reading anything the app wrote needs an App Group — a capability requiring a paid
+  membership, which on a free account risks breaking provisioning outright (D-32). Unlike
+  the Control Centre control there is no `openAppWhenRun` escape hatch, because a widget
+  must render before anyone taps it. It is a launcher instead.
+
 ### D-09 needs re-deciding
 
 **`SpeechDetector` now conforms to `SpeechModule`** in the shipping SDK:
@@ -304,15 +326,13 @@ call, not the next session's.
 
 ## 10. Known open issues
 
-1. **Live Activity never seen rendered** (§8). Creation succeeds.
-2. **Idle CPU unmeasured.** The <5% criterion drove D-38 and has never been checked.
-3. **`WeatherTool` is dead code** while `weatherIsUsable` is false. Deliberate, not an
+1. **`WeatherTool` is dead code** while `weatherIsUsable` is false. Deliberate, not an
    oversight — see D-46.
-4. **`LanguageEngine.reminders` is now unused** since the session registers no tools. Left in
+2. **`LanguageEngine.reminders` is now unused** since the session registers no tools. Left in
    place because re-registering tools would need it.
-5. **Keyword routing has gaps.** "Do I have time for coffee?" routes to the clock.
+3. **Keyword routing has gaps.** "Do I have time for coffee?" routes to the clock.
    One-line fixes in `Router` as they turn up.
-6. **Free-account provisioning expires every 7 days.** The app stops launching until rebuilt.
+4. **Free-account provisioning expires every 7 days.** The app stops launching until rebuilt.
 
 ---
 
