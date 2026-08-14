@@ -863,13 +863,32 @@ final class FridayEngine {
             return
         }
 
+        // Asked outright to say what's in it — no OCR attempted at all, because
+        // "what am I looking at" is not a request to read anything.
+        if case .describe = pendingScanPurpose {
+            pendingScanPurpose = .read
+            await describe(pages)
+            return
+        }
+
         let text: String
         do {
             text = try await TextScanner.text(in: pages)
         } catch {
-            // Only `ScanError` has a line FRIDAY can say. A raw Vision error
-            // must never reach him — CLAUDE.md's persona contract holds on the
-            // failure paths too, not just the happy one.
+            // A picture with no words in it is not a failure, and answering it
+            // as one was the old behaviour: "There's no text in that one" is
+            // what a scanner says, not what an assistant says. Photograph a dog
+            // and being told the dog contains no text is a small insult. So an
+            // empty read becomes a description instead.
+            if let scanError = error as? TextScanner.ScanError, case .empty = scanError {
+                pendingScanPurpose = .read
+                await describe(pages)
+                return
+            }
+
+            // Anything else genuinely is a failure. Only `ScanError` has a line
+            // FRIDAY can say — a raw Vision error must never reach him, because
+            // CLAUDE.md's persona contract holds on the failure paths too.
             let line = (error as? TextScanner.ScanError)?.errorDescription
                 ?? "That one wouldn't read, boss."
             conversation.append(ConversationTurn(speaker: .friday,
@@ -882,6 +901,35 @@ final class FridayEngine {
         }
 
         await present(scanned: text)
+    }
+
+    /// Says what's in a picture that has no words in it.
+    ///
+    /// Composed in Swift from the classifier's labels (D-44). These are labels
+    /// with confidences, not a description, and handing them to a 3B model to
+    /// make prose from is exactly how "dog 0.44" becomes a confident story about
+    /// somebody's garden.
+    private func describe(_ pages: [Data]) async {
+        guard let first = pages.first else {
+            await say("Nothing came through, boss. Try that again?")
+            return
+        }
+
+        let outcome = await withDeadline(seconds: 15) {
+            await SceneReader.read(first)
+        }
+
+        guard let outcome else {
+            await say("I couldn't make that one out, boss.")
+            return
+        }
+
+        let line = await voiced(SceneReader.sentence(for: outcome.labels,
+                                                     smudged: outcome.smudged),
+                                factual: true)
+        conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
+        Haptics.replyReceived()
+        await deliver(line)
     }
 
     /// Listens to the room for a few seconds and names what it heard.

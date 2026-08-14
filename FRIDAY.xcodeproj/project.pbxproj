@@ -87,6 +87,7 @@
 		AA0000000000000000000917 /* DocumentStructure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000916 /* DocumentStructure.swift */; };
 		AA0000000000000000000918 /* DocumentStructure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000916 /* DocumentStructure.swift */; };
 		AA0000000000000000000920 /* SoundListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000919 /* SoundListener.swift */; };
+		AA0000000000000000000922 /* SceneReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000921 /* SceneReader.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -199,6 +200,7 @@
 		AA0000000000000000000914 /* SightTranslator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SightTranslator.swift; sourceTree = "<group>"; };
 		AA0000000000000000000916 /* DocumentStructure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentStructure.swift; sourceTree = "<group>"; };
 		AA0000000000000000000919 /* SoundListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundListener.swift; sourceTree = "<group>"; };
+		AA0000000000000000000921 /* SceneReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneReader.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -365,6 +367,7 @@
 				AA0000000000000000000754 /* ReceiptReader.swift */,
 				AA000000000000000000075A /* BoardingPassReader.swift */,
 				AA0000000000000000000767 /* CardReader.swift */,
+				AA0000000000000000000921 /* SceneReader.swift */,
 				AA0000000000000000000916 /* DocumentStructure.swift */,
 				AA0000000000000000000914 /* SightTranslator.swift */,
 				AA0000000000000000000784 /* ScanFollowUp.swift */,
@@ -585,6 +588,7 @@
 				AA0000000000000000000865 /* ReckonTool.swift in Sources */,
 				AA0000000000000000000866 /* TimerTool.swift in Sources */,
 				AA0000000000000000000867 /* CardReader.swift in Sources */,
+				AA0000000000000000000922 /* SceneReader.swift in Sources */,
 				AA0000000000000000000917 /* DocumentStructure.swift in Sources */,
 				AA0000000000000000000915 /* SightTranslator.swift in Sources */,
 				AA0000000000000000000880 /* TimerAttributes.swift in Sources */,

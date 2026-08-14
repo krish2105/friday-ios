@@ -58,6 +58,9 @@ enum ScanPurpose: Equatable {
     case read
     /// Put it into this language first. `code` is a language code.
     case translate(code: String)
+    /// Don't read it — say what's in it. Asked for outright, and also where a
+    /// `.read` lands when the picture turns out to have no words in it.
+    case describe
 }
 
 /// Where the picture comes from.
@@ -168,6 +171,23 @@ enum Router {
 
         if let motion = motionRequest(in: text) {
             return .motion(aspect: motion.aspect, dayOffset: motion.dayOffset)
+        }
+
+        // "What am I looking at" — a picture with no expectation of words in it.
+        // Before the scan needles for the same reason as the sound rule below:
+        // it shares their opening and is the more specific phrasing.
+        //
+        // "Looking at" carries this on its own, but "what's in this photo" needs
+        // a container word, or "what's in this for me" would raise a camera.
+        if contains(text, ["what am i looking at", "what am i seeing",
+                           "what's in this photo", "whats in this photo",
+                           "what's in this picture", "whats in this picture",
+                           "what's in this image", "whats in this image",
+                           "describe this photo", "describe this picture",
+                           "describe what i'm looking at", "describe what im looking at",
+                           "what is this thing", "what's this a picture of",
+                           "whats this a picture of"]) {
+            return .scan(source: scanSource(in: text), purpose: .describe)
         }
 
         // Before the scan needles, because "what's that" is the opening of both
