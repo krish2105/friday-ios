@@ -36,10 +36,41 @@
 		AA000000000000000000081E /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071E /* Haptics.swift */; };
 		AA000000000000000000081F /* FridayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071F /* FridayAttributes.swift */; };
 		AA0000000000000000000820 /* LiveActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000720 /* LiveActivityController.swift */; };
+		AA0000000000000000000830 /* FridayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071F /* FridayAttributes.swift */; };
+		AA0000000000000000000831 /* FridayLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000721 /* FridayLiveActivity.swift */; };
+		AA0000000000000000000832 /* FridayActivityBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000730 /* FridayActivityBundle.swift */; };
+		AA0000000000000000000833 /* FridayActivity.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000301 /* FridayActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AA0000000000000000000911 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0000000000000000000100 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0000000000000000000201;
+			remoteInfo = FridayActivity;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		AA0000000000000000000503 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				AA0000000000000000000833 /* FridayActivity.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		AA0000000000000000000300 /* FRIDAY.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FRIDAY.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000000000000000000301 /* FridayActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FridayActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000000000000000000730 /* FridayActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayActivityBundle.swift; sourceTree = "<group>"; };
+		AA0000000000000000000731 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA0000000000000000000701 /* FRIDAYApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FRIDAYApp.swift; sourceTree = "<group>"; };
 		AA0000000000000000000702 /* FridayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayState.swift; sourceTree = "<group>"; };
 		AA0000000000000000000703 /* FridayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayEngine.swift; sourceTree = "<group>"; };
@@ -80,6 +111,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA0000000000000000000511 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -87,8 +125,18 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000401 /* FRIDAY */,
+				AA0000000000000000000410 /* FridayActivity */,
 				AA0000000000000000000405 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000410 /* FridayActivity */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000730 /* FridayActivityBundle.swift */,
+				AA0000000000000000000731 /* Info.plist */,
+			);
+			path = FridayActivity;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000000401 /* FRIDAY */ = {
@@ -147,6 +195,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000300 /* FRIDAY.app */,
+				AA0000000000000000000301 /* FridayActivity.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -194,15 +243,34 @@
 				AA0000000000000000000500 /* Sources */,
 				AA0000000000000000000501 /* Frameworks */,
 				AA0000000000000000000502 /* Resources */,
+				AA0000000000000000000503 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				AA0000000000000000000910 /* PBXTargetDependency */,
 			);
 			name = FRIDAY;
 			productName = FRIDAY;
 			productReference = AA0000000000000000000300 /* FRIDAY.app */;
 			productType = "com.apple.product-type.application";
+		};
+		AA0000000000000000000201 /* FridayActivity */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000000602 /* Build configuration list for PBXNativeTarget "FridayActivity" */;
+			buildPhases = (
+				AA0000000000000000000510 /* Sources */,
+				AA0000000000000000000511 /* Frameworks */,
+				AA0000000000000000000512 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FridayActivity;
+			productName = FridayActivity;
+			productReference = AA0000000000000000000301 /* FridayActivity.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -215,6 +283,9 @@
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
 					AA0000000000000000000200 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					AA0000000000000000000201 = {
 						CreatedOnToolsVersion = 26.0;
 					};
 				};
@@ -233,6 +304,7 @@
 			projectRoot = "";
 			targets = (
 				AA0000000000000000000200 /* FRIDAY */,
+				AA0000000000000000000201 /* FridayActivity */,
 			);
 		};
 /* End PBXProject section */
@@ -243,6 +315,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA0000000000000000000809 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0000000000000000000512 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -284,7 +363,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA0000000000000000000510 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0000000000000000000832 /* FridayActivityBundle.swift in Sources */,
+				AA0000000000000000000831 /* FridayLiveActivity.swift in Sources */,
+				AA0000000000000000000830 /* FridayAttributes.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA0000000000000000000910 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0000000000000000000201 /* FridayActivity */;
+			targetProxy = AA0000000000000000000911 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		AA0000000000000000000610 /* Debug */ = {
@@ -424,6 +521,54 @@
 			};
 			name = Release;
 		};
+		AA0000000000000000000630 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FridayActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FRIDAY;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.krishnamathur.friday.FridayActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		AA0000000000000000000631 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FridayActivity/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FRIDAY;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.krishnamathur.friday.FridayActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -441,6 +586,15 @@
 			buildConfigurations = (
 				AA0000000000000000000620 /* Debug */,
 				AA0000000000000000000621 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA0000000000000000000602 /* Build configuration list for PBXNativeTarget "FridayActivity" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000000000630 /* Debug */,
+				AA0000000000000000000631 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
