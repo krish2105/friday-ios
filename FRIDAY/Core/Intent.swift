@@ -78,22 +78,22 @@ enum Router {
             return .stopTranslating
         }
 
-        // Entering the mode. Distinct from the one-shot below by having **no
-        // phrase**: "translate into French" is a request to keep going,
-        // "translate good morning into French" is a request to translate one
-        // thing. The one-shot needs an object; this is what is left when there
-        // isn't one.
-        if contains(text, ["translate into", "translate to", "translating into",
-                           "translating to", "translation mode", "speak in", "talk in"]),
-           let named = Tongues.firstNamed(in: text) {
-            return .startTranslating(code: named.code)
-        }
-
         // Before everything else, because a translation request can contain any
         // words at all — "how do you say what time is it in French" would
         // otherwise be answered with the time.
         if let translation = translationRequest(in: input) {
             return translation
+        }
+
+        // Entering the mode, and this **must** come after the one-shot rather
+        // than before it. Mode is defined as a translation request with no
+        // phrase in it, so it can only be recognised once the attempt to find a
+        // phrase has failed. Checked first, it swallowed "translate into Hindi
+        // where is the station" whole and threw the phrase away.
+        if contains(text, ["translate into", "translate to", "translating into",
+                           "translating to", "translation mode", "speak in", "talk in"]),
+           let named = Tongues.firstNamed(in: text) {
+            return .startTranslating(code: named.code)
         }
 
         // Before reminders: "set a timer for ten minutes" is not a reminder, but
@@ -342,31 +342,44 @@ enum Router {
         else { return nil }
 
         let rest = String(input[range.upperBound...])
-        guard let (code, before) = Tongues.firstNamed(in: rest) else { return nil }
+        guard let (code, before, after) = Tongues.firstNamed(in: rest) else { return nil }
 
-        // The phrase is what sits between the opening and the language, minus
-        // the preposition that introduced it.
-        var phrase = before.trimmingCharacters(in: .whitespacesAndNewlines)
-        for tail in ["in", "into", "to", "for"] {
-            // The preposition standing alone means nothing was named:
-            // "translate to French" is a request with no object.
-            if phrase.lowercased() == tail {
-                phrase = ""
+        // Either side of the language, because both word orders are natural:
+        // "say good morning **in french**" and "translate **into hindi** where
+        // is the station". Before wins when both have content, since that is the
+        // commoner phrasing and the one that reads as a quotation.
+        let phrase = clean(before) ?? clean(after)
+
+        // Nothing on either side — "translate into French" is a request with no
+        // object, which is a request to enter the *mode*, handled by the caller.
+        guard let phrase else { return nil }
+
+        return .translate(phrase: phrase, code: code)
+    }
+
+    /// A candidate phrase with its wrapper stripped, or nil if nothing is left.
+    private static func clean(_ raw: String) -> String? {
+        var phrase = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // The preposition that introduced the language, on whichever side it
+        // ended up: "good morning **in**" before, or "**into** hindi" leaving
+        // nothing meaningful after.
+        for word in ["in", "into", "to", "for"] {
+            if phrase.lowercased() == word {
+                return nil
+            }
+            if phrase.lowercased().hasSuffix(" " + word) {
+                phrase = String(phrase.dropLast(word.count + 1))
                 break
             }
-            if phrase.lowercased().hasSuffix(" " + tail) {
-                phrase = String(phrase.dropLast(tail.count + 1))
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            if phrase.lowercased().hasPrefix(word + " ") {
+                phrase = String(phrase.dropFirst(word.count + 1))
                 break
             }
         }
+
         phrase = phrase.trimmingCharacters(in: CharacterSet(charactersIn: "\"'“”‘’ ,"))
-
-        // Nothing to translate — "translate to French" on its own is a request
-        // with no object, and asking is better than translating an empty string.
-        guard !phrase.isEmpty else { return nil }
-
-        return .translate(phrase: phrase, code: code)
+        return phrase.isEmpty ? nil : phrase
     }
 
     // MARK: - Calendar writes

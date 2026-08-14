@@ -51,12 +51,15 @@ enum Tongues {
         byName[name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)]
     }
 
-    /// The first language named anywhere in a phrase, with what preceded it.
+    /// The first language named anywhere in a phrase, with the text on **both**
+    /// sides of it.
     ///
-    /// Returns the code and the text before the name, which is the thing to be
-    /// translated: "how do you say good morning in french" gives `fr` and
-    /// "how do you say good morning".
-    static func firstNamed(in text: String) -> (code: String, before: String)? {
+    /// Both sides, because both word orders are natural and people use each:
+    /// "how do you say good morning **in french**" puts the phrase before the
+    /// language, and "translate **into hindi** where is the station" puts it
+    /// after. Returning only one side is what made the second lose its phrase
+    /// entirely and get read as a request to enter translation mode.
+    static func firstNamed(in text: String) -> (code: String, before: String, after: String)? {
         let lowered = text.lowercased()
         for name in namesByLength {
             // Word-boundary sensitive, or "thai" matches inside "thailand".
@@ -71,7 +74,11 @@ enum Tongues {
             let startsCleanly = before == nil || !(before!.isLetter)
             guard endsCleanly, startsCleanly else { continue }
 
-            return (byName[name]!, String(text[text.startIndex..<range.lowerBound]))
+            return (
+                byName[name]!,
+                String(text[text.startIndex..<range.lowerBound]),
+                String(text[range.upperBound...])
+            )
         }
         return nil
     }
