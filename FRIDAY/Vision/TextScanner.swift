@@ -72,8 +72,13 @@ enum TextScanner {
     }
 
     private static func transcript(of observations: [DocumentObservation]) throws -> String {
+        // Through `DocumentStructure` rather than straight to `.transcript`,
+        // which is what the doc comment above has promised since stage 1 and
+        // what the code did not do. A page with no tables and no lists comes
+        // back byte-identical to the old flattening, so every earlier stage is
+        // reading exactly what it read before.
         let text = observations
-            .map(\.document.text.transcript)
+            .map { DocumentStructure.transcript(of: $0.document) }
             .joined(separator: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
