@@ -28,7 +28,13 @@ struct CapabilitiesSheet: View {
             .init(icon: "calendar", name: "Your calendar", phrase: "What's on today"),
             .init(icon: "calendar.badge.plus", name: "Add an event", phrase: "Put lunch in my calendar at 1pm"),
             .init(icon: "checklist", name: "Reminders", phrase: "Remind me to call mom at 6"),
-            .init(icon: "figure.walk", name: "Steps and distance", phrase: "How many steps have I done")
+            .init(icon: "figure.walk", name: "Steps and distance", phrase: "How many steps have I done"),
+            .init(icon: "timer", name: "Timers", phrase: "Set a timer for 10 minutes")
+        ]),
+        Group(title: "Working things out", items: [
+            .init(icon: "percent", name: "Percentages and sums", phrase: "What's 15% of 4200"),
+            .init(icon: "arrow.left.arrow.right", name: "Convert units", phrase: "12 miles in km"),
+            .init(icon: "doc.on.clipboard", name: "Your clipboard", phrase: "What's on my clipboard")
         ]),
         Group(title: "People", items: [
             .init(icon: "phone", name: "Call someone", phrase: "Call mom"),
@@ -40,7 +46,8 @@ struct CapabilitiesSheet: View {
             .init(icon: "photo", name: "Something in your photos", phrase: "Read this screenshot"),
             .init(icon: "folder", name: "A PDF", phrase: "Read this PDF"),
             .init(icon: "qrcode.viewfinder", name: "A QR code or barcode", phrase: "What's this QR code"),
-            .init(icon: "receipt", name: "A receipt or boarding pass", phrase: "Read this — she spots them herself")
+            .init(icon: "receipt", name: "A receipt, pass or business card", phrase: "Read this — she spots them herself"),
+            .init(icon: "camera.viewfinder", name: "A screenshot you just took", phrase: "She offers, you tap")
         ]),
         Group(title: "Languages", items: [
             .init(icon: "character.bubble", name: "Translate", phrase: "How do you say good morning in French"),

@@ -64,6 +64,7 @@
 		AA0000000000000000000864 /* HeroPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000764 /* HeroPanel.swift */; };
 		AA0000000000000000000865 /* ReckonTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000765 /* ReckonTool.swift */; };
 		AA0000000000000000000866 /* TimerTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000766 /* TimerTool.swift */; };
+		AA0000000000000000000867 /* CardReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000767 /* CardReader.swift */; };
 		AA0000000000000000000840 /* Intent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000740 /* Intent.swift */; };
 		AA0000000000000000000830 /* FridayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071F /* FridayAttributes.swift */; };
 		AA0000000000000000000831 /* FridayLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000721 /* FridayLiveActivity.swift */; };
@@ -126,6 +127,7 @@
 		AA0000000000000000000764 /* HeroPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroPanel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000765 /* ReckonTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReckonTool.swift; sourceTree = "<group>"; };
 		AA0000000000000000000766 /* TimerTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerTool.swift; sourceTree = "<group>"; };
+		AA0000000000000000000767 /* CardReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardReader.swift; sourceTree = "<group>"; };
 		AA0000000000000000000740 /* Intent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intent.swift; sourceTree = "<group>"; };
 		AA0000000000000000000702 /* FridayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayState.swift; sourceTree = "<group>"; };
 		AA0000000000000000000703 /* FridayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayEngine.swift; sourceTree = "<group>"; };
@@ -312,6 +314,7 @@
 				AA0000000000000000000751 /* DocumentCamera.swift */,
 				AA0000000000000000000754 /* ReceiptReader.swift */,
 				AA000000000000000000075A /* BoardingPassReader.swift */,
+				AA0000000000000000000767 /* CardReader.swift */,
 				AA000000000000000000075B /* BarcodeReader.swift */,
 				AA000000000000000000075C /* LiveScanner.swift */,
 				AA000000000000000000075D /* PDFReader.swift */,
@@ -475,6 +478,7 @@
 				AA0000000000000000000864 /* HeroPanel.swift in Sources */,
 				AA0000000000000000000865 /* ReckonTool.swift in Sources */,
 				AA0000000000000000000866 /* TimerTool.swift in Sources */,
+				AA0000000000000000000867 /* CardReader.swift in Sources */,
 				AA0000000000000000000841 /* AskFridayIntent.swift in Sources */,
 				AA0000000000000000000842 /* StartListeningIntent.swift in Sources */,
 				AA0000000000000000000803 /* FridayEngine.swift in Sources */,

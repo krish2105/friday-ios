@@ -11,6 +11,10 @@ enum PendingAction: Equatable {
     case event(title: String, detail: String)
     case call(name: String, number: String)
     case link(URL)
+    /// A screenshot was just taken and FRIDAY is offering to read it.
+    case readScreenshot
+    /// A business card read off a page, waiting to be written to Contacts.
+    case saveContact(name: String, detail: String)
     case error(String)
 }
 
@@ -72,6 +76,18 @@ struct ActionSlot: View {
                         // actually goes is the only defence there is.
                         detail: url.absoluteString,
                         confirmTitle: "Open",
+                        onCancel: onCancel, onConfirm: onConfirm)
+
+        case .readScreenshot:
+            ConfirmCard(icon: "camera.viewfinder", heading: "SCREENSHOT TAKEN",
+                        title: "Want me to read that?",
+                        detail: "I'll pull the text out of it.",
+                        confirmTitle: "Read it",
+                        onCancel: onCancel, onConfirm: onConfirm)
+
+        case .saveContact(let name, let detail):
+            ConfirmCard(icon: "person.crop.circle.badge.plus", heading: "SAVE CONTACT",
+                        title: name, detail: detail, confirmTitle: "Save",
                         onCancel: onCancel, onConfirm: onConfirm)
 
         case .error(let message):

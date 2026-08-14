@@ -359,6 +359,27 @@ final class LanguageEngine {
         }
     }
 
+    /// Pulls the fields off a business card. Same contract as `receipt(in:)`.
+    func businessCard(in text: String) async -> BusinessCard? {
+        guard case .available = model.availability else { return nil }
+
+        return await bounded(seconds: 20) {
+            let session = LanguageModelSession {
+                """
+                You read business cards. Copy each field exactly as it is \
+                printed. Never reformat a phone number, never expand an \
+                abbreviation, never guess at a spelling. If a field is not \
+                printed, return an empty string.
+                """
+            }
+            return try? await session.respond(
+                to: text,
+                generating: BusinessCard.self,
+                options: Self.generation
+            ).content
+        }
+    }
+
     /// Races `work` against a deadline, abandoning the loser.
     ///
     /// A wedged extraction would strand `FridayEngine` in `.thinking`, which

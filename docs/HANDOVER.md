@@ -1,6 +1,6 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-09, D-45, D-53–D-66, §10)
+**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-09, D-45, D-53–D-67, §10)
 **Repo state:** `main`, stage 3 landed at `15bca6f` · **Commits:** 47
 
 This replaces the previous handover, which was written by a cloud session with no Swift
@@ -92,7 +92,7 @@ session was diagnosed this way in about a minute.
 
 ## 3. What is built
 
-59 Swift files across two targets.
+60 Swift files across two targets.
 
 | Dir | Files | Contents |
 |---|---|---|
@@ -104,7 +104,7 @@ session was diagnosed this way in about a minute.
 | `UI/` | 13 | `ContentView`, `ConversationView`, `OrbView`, `TalkButton`, `SettingsView`, `AmbientBackground`, `GlassSurface`, `FridayTheme`, `Haptics`, **`ActionSlot`**, **`InputBar`**, **`StatusHeader`**, **`CapabilitiesSheet`**, **`HeroPanel`** |
 | `LiveActivity/` | 3 | `FridayAttributes`, `LiveActivityController`, `FridayLiveActivity` |
 | `Intents/` | 3 | `AskFridayIntent` (+ `FridayAnswer`, `FridayShortcuts`), `StartListeningIntent`, `FridaySnippet` |
-| `Vision/` | 7 | `TextScanner`, `DocumentCamera`, `ReceiptReader`, `BoardingPassReader`, `BarcodeReader`, `LiveScanner`, `PDFReader` |
+| `Vision/` | 8 | `TextScanner`, `DocumentCamera`, `ReceiptReader`, `BoardingPassReader`, `BarcodeReader`, `LiveScanner`, `PDFReader`, `CardReader` |
 | `Language/` | 3 | `Bilingual`, `Translator`, `Tongues` |
 | `Notify/` | 1 | `FridayNotifier` |
 | `FridayActivity/` | 3 | `FridayActivityBundle` (`@main`), `FridayListenControl`, `FridayLockWidget` |
@@ -778,8 +778,36 @@ The old §8 still stands except where noted. New decisions from device work:
 
   Routing truth table is now **81 cases**.
 
-  **Stage 9b — screenshot offer, business cards, live translation, share extension, widget —
-  is not started.**
+
+- **D-67 · Stage 9b — the screenshot offer and business cards.**
+
+  **The screenshot offer needs no permission, and that is the design.**
+  `userDidTakeScreenshotNotification` tells the app a screenshot happened but
+  **never hands over the image**. Reaching into PhotoKit for "the most recent one" would need
+  photo-library access *and* would amount to reading his screen without being asked — so
+  FRIDAY **offers**, and the picker he chooses from is `PhotosPicker` filtered to
+  `PHPickerFilter.screenshots`, which runs out of process. The app still never gains photo
+  access and still only ever receives the one image he picked.
+
+  **`CardReader` is the third document type on the same shape**, and by now the shape is the
+  point rather than any one document. But the stakes differ: a receipt is read aloud and
+  forgotten, while **a card is written into the address book**, where a wrong digit becomes a
+  person you can never reach and will not know you cannot reach. So verification is stricter —
+  a name that cannot be found is **fatal**, not blanked, because a card whose name the model
+  invented is a fabricated person about to be saved to the phone. Its normaliser strips the
+  punctuation people scatter through phone numbers, so "+91 98200 33333" matches
+  "+919820033333" while a single changed digit still fails. Tested, including that case.
+
+  The write goes through `CNSaveRequest` and is reachable **only from the Save button** — D-34,
+  extended from reminders and calendar to contacts.
+
+  **Still not built from stage 9's design: live translation mode, the share extension, and the
+  Home Screen widget.** The share extension is the one with a real obstacle rather than just
+  cost — an extension hands data to its host app through an **App Group**, which is paid-gated
+  (D-52), so it would have to be entirely self-contained and duplicate the reading path into a
+  second target. The widget's blocker is smaller but unverified: whether a widget extension
+  inherits the app's EventKit and CoreMotion authorisation. **Check that before building it**,
+  or the feature dies after the work is done.
 
 ### D-18 is now probably unreachable — do not delete it, do not trust it
 

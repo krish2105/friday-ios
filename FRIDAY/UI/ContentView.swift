@@ -155,6 +155,15 @@ struct ContentView: View {
             appeared = true
             pulsing = true
         }
+        // iOS tells us a screenshot happened but never hands over the image, and
+        // reaching into PhotoKit for "the most recent one" would need a photo
+        // permission — so FRIDAY offers, and the picker he chooses from stays
+        // out of process.
+        .onReceive(NotificationCenter.default.publisher(
+            for: UIApplication.userDidTakeScreenshotNotification
+        )) { _ in
+            engine.offerScreenshot()
+        }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             availability.refresh()
@@ -183,14 +192,18 @@ struct ContentView: View {
         // That matters here: every capability this project has reached for has
         // cost provisioning on a free account (D-32, D-46, D-52). This one is
         // free.
+        // Filtered to screenshots when the screenshot offer raised it, so he is
+        // not hunting through a year of photos for the one he took four seconds
+        // ago. Out-of-process either way, so still no photo permission.
         .photosPicker(isPresented: $engine.showPhotoPicker,
                       selection: $picked,
-                      matching: .images)
+                      matching: engine.wantsScreenshotsOnly ? .screenshots : .images)
         .onChange(of: picked) { _, item in
             guard let item else { return }
             // Cleared straight away so picking the same photo twice still
             // fires — `onChange` only sees a *different* value.
             picked = nil
+            engine.clearPhotoFilter()
             Task {
                 let data = try? await item.loadTransferable(type: Data.self)
                 await engine.scan(data.map { [$0] } ?? [])

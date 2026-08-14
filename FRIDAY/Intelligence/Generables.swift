@@ -73,3 +73,24 @@ struct BoardingPass {
     @Guide(description: "The boarding or departure time, copied exactly as printed. Do not reformat it. Empty if not printed.")
     let boards: String
 }
+
+/// What a business card says.
+///
+/// Same contract again — copy, do not compose — and it matters more here than
+/// anywhere else in this file, because these fields end up **written into the
+/// address book**. A hallucinated digit in a phone number is a person you can
+/// never reach and will not know you cannot reach.
+@Generable
+struct BusinessCard {
+    @Guide(description: "The person's full name, copied exactly as printed. Empty if not printed.")
+    let name: String
+
+    @Guide(description: "The company or organisation, copied exactly as printed. Empty if not printed.")
+    let organisation: String
+
+    @Guide(description: "The phone number, copied exactly as printed including spaces and symbols. Empty if not printed.")
+    let phone: String
+
+    @Guide(description: "The email address, copied exactly as printed. Empty if not printed.")
+    let email: String
+}

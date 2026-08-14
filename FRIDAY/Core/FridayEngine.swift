@@ -57,6 +57,23 @@ final class FridayEngine {
     /// rule against an unattended write, applied to an unattended *navigation*.
     private(set) var pendingLink: URL?
 
+    /// A screenshot was just taken. Offered, never acted on — reading someone's
+    /// screen unasked is not a feature.
+    private(set) var offeringScreenshot = false
+
+    /// A business card read off a page, waiting on a press before it is written
+    /// to the address book (D-34).
+    private(set) var pendingCard: BusinessCard?
+
+    /// When set, every turn is translated into this language instead of routed.
+    /// Nil is the normal state.
+    private(set) var translatingInto: String?
+
+    /// Which photos the picker offers. Screenshots only when the offer raised
+    /// it, so he is not hunting through a year of pictures for the one he took
+    /// four seconds ago.
+    private(set) var wantsScreenshotsOnly = false
+
     func cancelLink() {
         pendingLink = nil
     }
@@ -78,6 +95,10 @@ final class FridayEngine {
             return .call(name: call.name, number: call.number)
         }
         if let pendingLink { return .link(pendingLink) }
+        if let card = pendingCard {
+            return .saveContact(name: card.name, detail: CardReader.detail(for: card))
+        }
+        if offeringScreenshot { return .readScreenshot }
         if let reminder = reminders.pending {
             return .reminder(
                 title: reminder.title,
@@ -101,6 +122,8 @@ final class FridayEngine {
         case .link: cancelLink()
         case .reminder: await cancelReminder()
         case .event: await cancelEvent()
+        case .saveContact: pendingCard = nil
+        case .readScreenshot: offeringScreenshot = false
         case .none: break
         }
     }
@@ -112,8 +135,40 @@ final class FridayEngine {
         case .reminder: await confirmReminder()
         case .event: await confirmEvent()
         case .error: dismissAlert()
+        case .saveContact: await saveCard()
+        case .readScreenshot: readScreenshot()
         case .call, .link, .none: break
         }
+    }
+
+    /// The screenshot offer, raised by `ContentView` when iOS says one was taken.
+    ///
+    /// Offered rather than acted on, and the picker is the mechanism on purpose:
+    /// `PhotosPicker` runs **out of process**, so FRIDAY never gains photo
+    /// library access and only ever receives the one image he chose. Reaching
+    /// into PhotoKit for "the most recent screenshot" would need a permission,
+    /// and would be reading his screen without being asked to.
+    func offerScreenshot() {
+        guard state == .idle, !offeringScreenshot else { return }
+        offeringScreenshot = true
+    }
+
+    private func readScreenshot() {
+        offeringScreenshot = false
+        wantsScreenshotsOnly = true
+        showPhotoPicker = true
+    }
+
+    func clearPhotoFilter() {
+        wantsScreenshotsOnly = false
+    }
+
+    private func saveCard() async {
+        guard let card = pendingCard else { return }
+        pendingCard = nil
+        let outcome = await voiced(await CardReader.save(card), factual: true)
+        conversation.append(ConversationTurn(speaker: .friday, text: outcome, tone: "calm"))
+        await deliver(outcome)
     }
 
     let audioSession = AudioSessionManager()
@@ -730,6 +785,22 @@ final class FridayEngine {
            let pass = BoardingPassReader.verified(extracted, against: text) {
             let line = await voiced(BoardingPassReader.sentence(for: pass), factual: true)
             conversation.append(ConversationTurn(speaker: .friday, text: Self.excerpt(of: text), tone: "calm", kind: .quoted))
+            conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
+            Haptics.replyReceived()
+            await deliver(line)
+            return
+        }
+
+        // A business card. Same three gates, and the strictest verification of
+        // the three document types — these fields are about to be written into
+        // the address book rather than read aloud and forgotten.
+        if CardReader.looksLikeCard(text),
+           let extracted = await language.businessCard(in: text),
+           let card = CardReader.verified(extracted, against: text) {
+            pendingCard = card
+            let line = await voiced(CardReader.sentence(for: card), factual: true)
+            conversation.append(ConversationTurn(speaker: .friday, text: Self.excerpt(of: text),
+                                                 tone: "calm", kind: .quoted))
             conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
             Haptics.replyReceived()
             await deliver(line)
