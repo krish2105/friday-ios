@@ -1,3 +1,4 @@
+import Foundation
 import FoundationModels
 
 /// Current date and time, in the user's own locale and timezone.

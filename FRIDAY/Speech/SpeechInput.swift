@@ -242,12 +242,15 @@ final class SpeechInput {
         }
 
         guard let analyzerFormat else { throw SpeechInputError.converterUnavailable }
-        guard let made = AVAudioConverter(from: hardwareFormat, to: analyzerFormat) else {
+        // Correction to HANDOVER §6's first concurrency hatch: this used to be
+        // `nonisolated(unsafe) let converter = made`. It isn't needed —
+        // `AVAudioConverter` is Sendable in the iOS 26 SDK, and the compiler
+        // says so ("'nonisolated(unsafe)' is unnecessary for a constant with
+        // 'Sendable' type 'AVAudioConverter'"). The hatch and the local it
+        // existed to host are both gone.
+        guard let converter = AVAudioConverter(from: hardwareFormat, to: analyzerFormat) else {
             throw SpeechInputError.converterUnavailable
         }
-
-        // The converter is touched only from the audio thread inside the tap.
-        nonisolated(unsafe) let converter = made
 
         input.installTap(onBus: 0, bufferSize: 4096, format: hardwareFormat) { buffer, _ in
             let measured = Self.normalisedLevel(of: buffer)
@@ -278,7 +281,13 @@ final class SpeechInput {
             return nil
         }
 
-        var supplied = false
+        // `AVAudioConverterInputBlock` is @Sendable, so under strict concurrency
+        // the block may neither capture a mutable local nor a non-Sendable
+        // `AVAudioPCMBuffer`. Both attributes are honest here: `convert` calls
+        // the block synchronously, on this thread, before returning, so nothing
+        // is actually concurrent and neither value outlives the call.
+        nonisolated(unsafe) var supplied = false
+        nonisolated(unsafe) let source = buffer
         var conversionError: NSError?
 
         converter.convert(to: output, error: &conversionError) { _, status in
@@ -288,7 +297,7 @@ final class SpeechInput {
             }
             supplied = true
             status.pointee = .haveData
-            return buffer
+            return source
         }
 
         guard conversionError == nil, output.frameLength > 0 else { return nil }
