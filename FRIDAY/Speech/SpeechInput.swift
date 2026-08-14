@@ -39,11 +39,12 @@ enum SpeechInputError: LocalizedError {
 /// analyser and the input level — because two taps on the same input node
 /// conflict, so there can only be one audio owner.
 ///
-/// Note on `SpeechDetector`: it is deliberately absent. In the shipping SDK it
-/// does not conform to `SpeechModule`, so `SpeechAnalyzer(modules:)` refuses it
-/// at compile time. Apple has confirmed this is a bug slated for a point
-/// update. Until then, voice activity comes from `level` below, which is
-/// Apple's own suggested fallback. Push-to-talk governs the turn regardless.
+/// Note on `SpeechDetector`: it is absent, but the original reason has expired.
+/// D-09 recorded that it did not conform to `SpeechModule`, an Apple bug. The
+/// shipping iOS 26 SDK now declares `final public class SpeechDetector :
+/// Speech.SpeechModule`, so it *would* compile today. It stays out because the
+/// `AVAudioEngine` RMS level below works and push-to-talk governs the turn
+/// regardless — adding it is a live decision, not a blocked one.
 @MainActor
 @Observable
 final class SpeechInput {
@@ -109,6 +110,17 @@ final class SpeechInput {
 
     /// Resolve a locale and make sure its model is installed. Safe to call
     /// repeatedly; it no-ops once ready.
+    ///
+    /// ✅ VERIFIED on device by temporarily forcing this branch: the red banner
+    /// appears, the engine returns to `.idle` rather than hanging in
+    /// `.listening`, the text field keeps working, and pressing the orb again
+    /// re-runs rather than dying — both of D-29's recovery routes.
+    ///
+    /// It cannot be reached normally on a device that already has the speech
+    /// assets: `assetInstallationRequest` returns nil and preparation succeeds
+    /// without downloading. CLAUDE.md's trap table warns that a silent failure
+    /// here makes the first transcription fail with no explanation, which is
+    /// why the state is surfaced rather than swallowed.
     func prepareAssets() async {
         guard !assetState.isReady else { return }
 
