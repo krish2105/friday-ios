@@ -1,0 +1,99 @@
+import SwiftUI
+
+/// Scrolling transcript. Boss on the right, FRIDAY on the left.
+struct ConversationView: View {
+    var turns: [ConversationTurn]
+    /// Reply text as it streams in, shown in the in-flight bubble.
+    var streamingText: String
+    var isThinking: Bool
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 14) {
+                    if turns.isEmpty {
+                        emptyState
+                    }
+
+                    ForEach(Array(turns.enumerated()), id: \.element.id) { index, turn in
+                        TurnBubble(
+                            turn: turn,
+                            displayText: text(for: turn, isLast: index == turns.count - 1)
+                        )
+                        .id(turn.id)
+                    }
+                }
+                .padding(.vertical, 6)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .onChange(of: turns.count) { _, _ in scrollToEnd(proxy) }
+            .onChange(of: streamingText) { _, _ in scrollToEnd(proxy) }
+        }
+    }
+
+    private var emptyState: some View {
+        Text("Standing by, boss.")
+            .font(.system(size: 16, weight: .regular, design: .rounded))
+            .foregroundStyle(FridayTheme.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 8)
+    }
+
+    private func text(for turn: ConversationTurn, isLast: Bool) -> String {
+        guard turn.isFriday, turn.text.isEmpty, isLast, isThinking else {
+            return turn.text
+        }
+        return streamingText.isEmpty ? "…" : streamingText
+    }
+
+    private func scrollToEnd(_ proxy: ScrollViewProxy) {
+        guard let last = turns.last else { return }
+        withAnimation(.easeOut(duration: 0.25)) {
+            proxy.scrollTo(last.id, anchor: .bottom)
+        }
+    }
+}
+
+/// One bubble. FRIDAY's is tinted by the mood the model reported.
+private struct TurnBubble: View {
+    var turn: ConversationTurn
+    var displayText: String
+
+    private var tone: FridayTone { FridayTone(turn.tone) }
+
+    var body: some View {
+        HStack {
+            if turn.isFriday {
+                bubble
+                Spacer(minLength: 40)
+            } else {
+                Spacer(minLength: 40)
+                bubble
+            }
+        }
+    }
+
+    private var bubble: some View {
+        Text(displayText)
+            .font(.system(size: 16, weight: .regular, design: .rounded))
+            .foregroundStyle(FridayTheme.textPrimary)
+            .lineSpacing(3)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(turn.isFriday ? tone.color.opacity(0.11) : Color.white.opacity(0.07))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(
+                        turn.isFriday ? tone.color.opacity(0.34) : Color.white.opacity(0.13),
+                        lineWidth: 1
+                    )
+            )
+            .accessibilityLabel(turn.isFriday ? "FRIDAY said" : "You said")
+            .accessibilityValue(displayText)
+    }
+}
