@@ -14,7 +14,7 @@ enum FridayAnswer {
         let asked = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !asked.isEmpty else { return "Didn't catch that, boss." }
 
-        let intent = Router.intent(for: asked)
+        var intent = Router.intent(for: asked)
 
         // Reminders stay UI-gated even here (D-34). A 3B model must never be
         // able to write to real Reminders, and Siri has no Add it button to
@@ -23,8 +23,20 @@ enum FridayAnswer {
             return "Reminders need a tap to confirm, boss. Open FRIDAY and I'll set it up."
         }
 
+        // Calendar writes are the same shape and the same rule.
+        if case .event = intent {
+            return "Calendar entries need a tap to confirm, boss. Open FRIDAY and I'll set it up."
+        }
+
+        // A lookup is fine here; *offering to dial* is not, because there is no
+        // button to press. The number is read out instead, which is the useful
+        // half and none of the risk.
+        if case .contact(let name, let aspect, true) = intent {
+            intent = .contact(name: name, aspect: aspect, callable: false)
+        }
+
         if case .chat = intent {
-            let language = LanguageEngine(reminders: ReminderService())
+            let language = LanguageEngine(reminders: ReminderService(notifier: FridayNotifier()))
             do {
                 return try await language.respond(to: asked).spoken
             } catch let failure as LanguageEngineFailure {
@@ -34,7 +46,12 @@ enum FridayAnswer {
             }
         }
 
-        return await Lookup.answer(for: intent, reminders: ReminderService())
+        return await Lookup.answer(
+            for: intent,
+            reminders: ReminderService(notifier: FridayNotifier()),
+            events: EventService(),
+            contacts: ContactService()
+        )
     }
 }
 

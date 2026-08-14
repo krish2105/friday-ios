@@ -3,6 +3,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Bindable var output: SpeechOutput
+    @Bindable var notifier: FridayNotifier
     var translator: Translator
 
     @Environment(\.dismiss) private var dismiss
@@ -12,6 +13,7 @@ struct SettingsView: View {
             Form {
                 voiceSection
                 deliverySection
+                nudgeSection
                 hindiSection
             }
             .task { await translator.refreshAvailability() }
@@ -98,6 +100,24 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Reminders
+
+    private var nudgeSection: some View {
+        Section {
+            Toggle("FRIDAY reminds you", isOn: $notifier.nudgesHimself)
+        } header: {
+            Text("Reminders")
+        } footer: {
+            // Exactly one of them should speak up. Both is redundant, neither
+            // loses the reminder, so the toggle picks which.
+            if notifier.nudgesHimself {
+                Text("FRIDAY delivers the reminder herself, in her own words, with Done and Snooze on the notification. It's still saved to Apple Reminders — just without a second alert.")
+            } else {
+                Text("Apple Reminders alerts you as usual, and FRIDAY stays quiet. The reminder is saved either way.")
+            }
+        }
+    }
+
     // MARK: - Hindi
     //
     // Reported rather than offered, for the same reason as the Premium voices
@@ -133,5 +153,5 @@ struct SettingsView: View {
 }
 
 #Preview {
-    SettingsView(output: SpeechOutput(), translator: Translator())
+    SettingsView(output: SpeechOutput(), notifier: FridayNotifier(), translator: Translator())
 }

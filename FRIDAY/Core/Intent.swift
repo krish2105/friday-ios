@@ -19,6 +19,15 @@ enum Intent: Equatable {
     case device(aspect: String)
     case calendar(day: String)
     case reminder(title: String, when: String)
+    /// Put something in the calendar. Staged, never written outright (D-34).
+    case event(title: String, when: String)
+    /// Look someone up. `callable` means the phrasing asked to reach them, so
+    /// the answer offers a dial button rather than only reading the number out.
+    case contact(name: String, aspect: ContactService.Aspect, callable: Bool)
+    /// Whose birthday is next, across the whole address book.
+    case nextBirthday
+    /// Steps, distance or stairs. `dayOffset` is 0 for today, -1 for yesterday.
+    case motion(aspect: MotionTool.Aspect, dayOffset: Int)
     /// Read whatever he's about to show me. Nothing to look up here — the image
     /// comes from the UI, so `FridayEngine.scan` does the work.
     case scan(source: ScanSource)
@@ -45,6 +54,29 @@ enum Router {
             return .reminder(title: reminderTitle(from: input), when: input)
         }
 
+        // Writing to the calendar is checked before *reading* it, because
+        // "schedule" appears in both and answering "schedule lunch at one" with
+        // today's agenda is the wrong half of the word.
+        if let event = eventRequest(in: text, original: input) {
+            return event
+        }
+
+        // Before the device aspects: "whose birthday is next" contains no device
+        // word, but "call mom" would fall to chat if contacts came later than
+        // the broader needles below.
+        if contains(text, ["whose birthday", "next birthday", "birthday next",
+                           "any birthdays", "whos birthday"]) {
+            return .nextBirthday
+        }
+
+        if let contact = contactRequest(in: text, original: input) {
+            return contact
+        }
+
+        if let motion = motionRequest(in: text) {
+            return .motion(aspect: motion.aspect, dayOffset: motion.dayOffset)
+        }
+
         // Every needle carries a demonstrative — "this", "that", "it". A bare
         // "read" or "scan" would catch "did you read the news" and "scan the
         // calendar for me", and putting a picker up on those is a much worse
@@ -69,7 +101,9 @@ enum Router {
             return .device(aspect: aspect)
         }
 
-        if contains(text, ["calendar", "schedule", "agenda", "my meetings", "next meeting", "what's on today", "whats on today", "what's on my day"]) {
+        if contains(text, ["calendar", "schedule", "agenda", "my meetings", "next meeting",
+                           "what's on today", "whats on today", "what's on my day",
+                           "do i have anything", "anything on today", "anything on tomorrow"]) {
             return .calendar(day: text.contains("tomorrow") ? "tomorrow" : "today")
         }
 
@@ -132,6 +166,155 @@ enum Router {
             : .camera
     }
 
+    // MARK: - Calendar writes
+
+    /// A request to *add* something, as opposed to read the day back.
+    ///
+    /// The needles all carry a verb of placement — "put ‹x› in my calendar",
+    /// "schedule ‹x›", "book ‹x›". A bare "calendar" stays a read, which is what
+    /// it has always been.
+    private static func eventRequest(in text: String, original: String) -> Intent? {
+        let openings = ["put ", "add ", "schedule ", "book ", "set up ", "create "]
+        let targets = ["calendar", "meeting", "appointment", "event"]
+
+        guard openings.contains(where: text.hasPrefix) || contains(text, ["schedule ", "book "]),
+              contains(text, targets) || contains(text, ["at ", " on ", " tomorrow", " today"])
+        else { return nil }
+
+        // Reading, not writing: "what's on my calendar" opens with "what".
+        guard !contains(text, ["what", "when is", "when's", "do i have", "am i free"]) else {
+            return nil
+        }
+
+        return .event(title: eventTitle(from: original), when: original)
+    }
+
+    /// Strips the placement wrapper and the calendar words, so "put lunch with
+    /// Priya in my calendar at 1pm" becomes "lunch with Priya".
+    private static func eventTitle(from input: String) -> String {
+        var title = input.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        for prefix in ["put ", "add ", "schedule ", "book ", "set up ", "create "] {
+            if title.lowercased().hasPrefix(prefix) {
+                title = String(title.dropFirst(prefix.count))
+                break
+            }
+        }
+        for filler in [" in my calendar", " to my calendar", " on my calendar",
+                       " in the calendar", " as an event", " a meeting for", " a meeting"] {
+            if let found = title.range(of: filler, options: .caseInsensitive) {
+                title.removeSubrange(found)
+            }
+        }
+        return title.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // MARK: - Contacts
+
+    /// Who was asked about, and what about them.
+    ///
+    /// The name is whatever follows the possessive or the verb, taken verbatim —
+    /// `ContactService` does the real matching against nicknames and relations,
+    /// because that needs the address book and this does not have it.
+    private static func contactRequest(in text: String, original: String) -> Intent? {
+        if let name = name(in: original, after: ["call ", "ring ", "phone ", "dial "]) {
+            return .contact(name: name, aspect: .number, callable: true)
+        }
+
+        let aspect: ContactService.Aspect?
+        if contains(text, ["number", "phone number", "mobile", "cell"]) {
+            aspect = .number
+        } else if contains(text, ["email", "e-mail", "email address"]) {
+            aspect = .email
+        } else if contains(text, ["birthday", "born on"]) {
+            aspect = .birthday
+        } else {
+            aspect = nil
+        }
+
+        guard let aspect, let name = possessiveName(in: original) else { return nil }
+        return .contact(name: name, aspect: aspect, callable: false)
+    }
+
+    /// Words that follow a calling verb but are not a person.
+    ///
+    /// "Call me back", "call it off", "call her later" — the verb is there and
+    /// nobody is being named. Routing those to Contacts puts a Call button in
+    /// front of him for a phrase that had nothing to do with phoning anyone.
+    private static let notPeople: Set<String> = [
+        "me", "it", "them", "him", "her", "us", "you", "back", "off", "again",
+        "later", "now", "please", "someone", "somebody", "a", "an", "the", "my"
+    ]
+
+    /// Who to ring: "call mom" → "mom", "phone Raj Malhotra" → "Raj Malhotra".
+    private static func name(in input: String, after verbs: [String]) -> String? {
+        let lowered = input.lowercased()
+
+        for verb in verbs {
+            guard let range = lowered.range(of: verb) else { continue }
+
+            let words = input[range.upperBound...].split(separator: " ").map(String.init)
+            guard let first = words.first, !notPeople.contains(first.lowercased()) else {
+                return nil
+            }
+
+            // A second word only when it reads like the rest of a name. This is
+            // what keeps "call mom later" from asking for someone called
+            // "mom later", while still finding "Raj Malhotra".
+            var name = first
+            if words.count > 1,
+               !notPeople.contains(words[1].lowercased()),
+               words[1].first?.isUppercase == true {
+                name += " " + words[1]
+            }
+            return name.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        }
+        return nil
+    }
+
+    /// The owner of a possessive: "what's Priya's number" → "Priya".
+    private static func possessiveName(in input: String) -> String? {
+        for token in input.split(separator: " ") {
+            let word = String(token)
+            guard let apostrophe = word.range(of: "'s") ?? word.range(of: "’s") else { continue }
+            let owner = String(word[word.startIndex..<apostrophe.lowerBound])
+            // Question words carry possessives too. "When's Priya's birthday"
+            // has two, and taking the first asks Contacts for someone called
+            // "when" — so the interrogatives are skipped and the loop moves on
+            // to the name that follows.
+            guard owner.count > 1, !["what", "who", "whose", "that", "it", "here",
+                                     "there", "when", "where", "why", "how", "he",
+                                     "she", "let", "today", "tomorrow"]
+                .contains(owner.lowercased()) else { continue }
+            return owner
+        }
+        return nil
+    }
+
+    // MARK: - Movement
+
+    /// Steps and friends, with how far back he asked.
+    ///
+    /// Multi-word as ever: a bare "steps" catches "what are the next steps",
+    /// and a bare "distance" catches half of everything.
+    private static func motionRequest(in text: String) -> (aspect: MotionTool.Aspect, dayOffset: Int)? {
+        let offset = text.contains("yesterday") ? -1 : 0
+
+        if contains(text, ["how many steps", "step count", "my steps", "steps today",
+                           "steps have i", "steps did i"]) {
+            return (.steps, offset)
+        }
+        if contains(text, ["how far have i walked", "how far did i walk", "how far i walked",
+                           "walking distance", "how much have i walked"]) {
+            return (.distance, offset)
+        }
+        if contains(text, ["how many flights", "flights of stairs", "stairs have i",
+                           "stairs did i", "floors climbed"]) {
+            return (.flights, offset)
+        }
+        return nil
+    }
+
     /// Strips the request wrapper so the reminder reads as the task itself:
     /// "remind me to call mom at 6pm" becomes "call mom at 6pm".
     ///
@@ -163,7 +346,12 @@ enum Router {
 /// right and "boss" is always present.
 @MainActor
 enum Lookup {
-    static func answer(for intent: Intent, reminders: ReminderService) async -> String {
+    static func answer(
+        for intent: Intent,
+        reminders: ReminderService,
+        events: EventService,
+        contacts: ContactService
+    ) async -> String {
         do {
             switch intent {
             case .time(let includeDate):
@@ -182,6 +370,23 @@ enum Lookup {
                     return "I didn't catch what to remind you about, boss."
                 }
                 return "That's \(pending.title), \(pending.spokenWhen), boss. Say the word and I'll add it."
+
+            case .event(let title, let when):
+                // Staged only, exactly like a reminder (D-34). Nothing reaches
+                // the calendar without the Add it button.
+                guard events.stage(title: title, when: when), let pending = events.pending else {
+                    return "When should I put that down for, boss?"
+                }
+                return "That's \(pending.title), \(pending.spokenWhen), boss. Say the word and I'll add it."
+
+            case .contact(let name, let aspect, let callable):
+                return await contacts.answer(for: name, aspect: aspect, offeringCall: callable)
+
+            case .nextBirthday:
+                return await contacts.nextBirthday()
+
+            case .motion(let aspect, let dayOffset):
+                return await MotionTool.answer(aspect: aspect, dayOffset: dayOffset)
 
             case .scan:
                 // Only Siri arrives here. `FridayEngine` intercepts every `.scan`

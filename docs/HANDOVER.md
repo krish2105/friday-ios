@@ -1,6 +1,6 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-45, D-53–D-57, §10)
+**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-45, D-53–D-58, §10)
 **Repo state:** `main`, stage 3 landed at `15bca6f` · **Commits:** 47
 
 This replaces the previous handover, which was written by a cloud session with no Swift
@@ -92,20 +92,21 @@ session was diagnosed this way in about a minute.
 
 ## 3. What is built
 
-40 Swift files across two targets.
+44 Swift files across two targets.
 
 | Dir | Files | Contents |
 |---|---|---|
 | `FRIDAY/` | 1 | `FRIDAYApp.swift` |
-| `Core/` | 5 | `FridayEngine`, `FridayState`, `FridayPersona`, `ConversationTurn`, **`Intent`** |
+| `Core/` | 6 | `FridayEngine`, `FridayState`, `FridayPersona`, `ConversationTurn`, **`Intent`**, `EventService` |
 | `Intelligence/` | 3 | `Availability`, `Generables`, `LanguageEngine` |
 | `Speech/` | 3 | `AudioSessionManager`, `SpeechInput`, `SpeechOutput` |
-| `Tools/` | 6 | `FridayTool`, `TimeTool`, `DeviceTool`, `WeatherTool`, `CalendarTool`, `ReminderTool` |
+| `Tools/` | 8 | `FridayTool`, `TimeTool`, `DeviceTool`, `WeatherTool`, `CalendarTool`, `ReminderTool`, `ContactTool`, `MotionTool` |
 | `UI/` | 9 | `ContentView`, `ConversationView`, `OrbView`, `TalkButton`, `SettingsView`, `AmbientBackground`, `GlassSurface`, `FridayTheme`, `Haptics` |
 | `LiveActivity/` | 3 | `FridayAttributes`, `LiveActivityController`, `FridayLiveActivity` |
 | `Intents/` | 2 | `AskFridayIntent` (+ `FridayAnswer`, `FridayShortcuts`), `StartListeningIntent` |
 | `Vision/` | 3 | `TextScanner`, `DocumentCamera`, `ReceiptReader` |
 | `Language/` | 2 | `Bilingual`, `Translator` |
+| `Notify/` | 1 | `FridayNotifier` |
 | `FridayActivity/` | 3 | `FridayActivityBundle` (`@main`), `FridayListenControl`, `FridayLockWidget` |
 
 ### Per-session status
@@ -466,6 +467,46 @@ The old §8 still stands except where noted. New decisions from device work:
   subtotal, a GST line, a line item, the bill number, the card digits. A receipt that prints
   its total on the *following* line is rejected and falls back to the summary — the right way
   round, since a missed extraction costs a nicety and a wrong one misreports what he spent.
+
+- **D-58 · Stage 4 — FRIDAY acts, and every action is still gated.** Four features, all free
+  on a Personal Team: her own reminder nudges, contacts, calendar writes, and steps. Two new
+  usage strings (`NSContactsUsageDescription`, `NSMotionUsageDescription`) plus
+  `NSCalendarsWriteOnlyAccessUsageDescription`. **No capability, nothing that touches
+  provisioning.**
+
+  Four owner decisions, taken at the design gate:
+
+  - **A Settings toggle decides who nudges.** Both alerting is redundant, neither loses the
+    reminder. On, FRIDAY schedules a local notification and the `EKReminder` is saved
+    *without* an alarm; off, the alarm goes back and she stays quiet. The reminder is written
+    to Apple Reminders either way, so D-34 holds and it outlives the app being deleted. The
+    alarm is the **fallback**, not a second alert — added only when FRIDAY could not take the
+    job.
+  - **Calling is staged, never dialled.** `Router` has known phrasing gaps and a false
+    positive rings a real person. Same shape as D-34.
+  - **Name matching covers nicknames and relations** — and a synonym table is what makes it
+    work. Nobody files a related name as "mom"; the Contacts app offers **"mother"**. Without
+    the mapping the headline case fails while "mother" succeeds, which the fixture test caught
+    and nothing else would have. Hindi kinship terms are in the table too, since D-56.
+  - **Notifications carry Done and Snooze.**
+
+  **`CMPedometer` is the free route to a HealthKit-gated feature.** HealthKit cannot be signed
+  on this account (D-32); CoreMotion needs only a usage string. Its history is **seven days**,
+  so anything older is declined rather than answered with a silent zero — and *no data* is
+  kept distinct from *zero steps*, because a phone left on a desk did not walk nowhere.
+
+  Two Swift 6 lessons, both the same shape as `Translator`'s: `CNContact` and `CMPedometerData`
+  are **not `Sendable`**, so neither may leave the queue that produced it. Both are mapped to
+  small `Sendable` value types at the boundary — `Person` and `Reading` — rather than reaching
+  for `@preconcurrency`. Mapping `CNContact` to `Person` had a second payoff that was worth
+  more than the compiler fix: it made the matching **pure**, so "does *mom* find the right
+  person" is answerable against fixtures instead of only on a device with a real address book.
+
+  The routing truth table now runs **47 cases** and re-runs every previously passing one. That
+  caught four real bugs in one pass: `when's Priya's birthday` resolving to a person called
+  "when", and `call me back later` / `call it off` both staging calls to nobody. Four new
+  needle groups is the largest single addition `Router` has had; extend the table, never test
+  routing by hand.
 
 ### D-18 is now probably unreachable — do not delete it, do not trust it
 

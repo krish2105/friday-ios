@@ -46,6 +46,10 @@
 		AA0000000000000000000852 /* Bilingual.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000752 /* Bilingual.swift */; };
 		AA0000000000000000000853 /* Translator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000753 /* Translator.swift */; };
 		AA0000000000000000000854 /* ReceiptReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000754 /* ReceiptReader.swift */; };
+		AA0000000000000000000855 /* FridayNotifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000755 /* FridayNotifier.swift */; };
+		AA0000000000000000000856 /* ContactTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000756 /* ContactTool.swift */; };
+		AA0000000000000000000857 /* EventService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000757 /* EventService.swift */; };
+		AA0000000000000000000858 /* MotionTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000758 /* MotionTool.swift */; };
 		AA0000000000000000000840 /* Intent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000740 /* Intent.swift */; };
 		AA0000000000000000000830 /* FridayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071F /* FridayAttributes.swift */; };
 		AA0000000000000000000831 /* FridayLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000721 /* FridayLiveActivity.swift */; };
@@ -90,6 +94,10 @@
 		AA0000000000000000000752 /* Bilingual.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bilingual.swift; sourceTree = "<group>"; };
 		AA0000000000000000000753 /* Translator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Translator.swift; sourceTree = "<group>"; };
 		AA0000000000000000000754 /* ReceiptReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptReader.swift; sourceTree = "<group>"; };
+		AA0000000000000000000755 /* FridayNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayNotifier.swift; sourceTree = "<group>"; };
+		AA0000000000000000000756 /* ContactTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactTool.swift; sourceTree = "<group>"; };
+		AA0000000000000000000757 /* EventService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventService.swift; sourceTree = "<group>"; };
+		AA0000000000000000000758 /* MotionTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionTool.swift; sourceTree = "<group>"; };
 		AA0000000000000000000740 /* Intent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intent.swift; sourceTree = "<group>"; };
 		AA0000000000000000000702 /* FridayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayState.swift; sourceTree = "<group>"; };
 		AA0000000000000000000703 /* FridayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayEngine.swift; sourceTree = "<group>"; };
@@ -163,6 +171,7 @@
 				AA0000000000000000000409 /* Intents */,
 				AA0000000000000000000411 /* Vision */,
 				AA0000000000000000000412 /* Language */,
+				AA0000000000000000000413 /* Notify */,
 				AA0000000000000000000404 /* UI */,
 				AA0000000000000000000709 /* Assets.xcassets */,
 			);
@@ -177,6 +186,7 @@
 				AA000000000000000000070F /* FridayPersona.swift */,
 				AA0000000000000000000710 /* ConversationTurn.swift */,
 				AA0000000000000000000740 /* Intent.swift */,
+				AA0000000000000000000757 /* EventService.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -235,8 +245,18 @@
 				AA000000000000000000071A /* WeatherTool.swift */,
 				AA000000000000000000071B /* CalendarTool.swift */,
 				AA000000000000000000071C /* ReminderTool.swift */,
+				AA0000000000000000000756 /* ContactTool.swift */,
+				AA0000000000000000000758 /* MotionTool.swift */,
 			);
 			path = Tools;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000413 /* Notify */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000755 /* FridayNotifier.swift */,
+			);
+			path = Notify;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000000412 /* Language */ = {
@@ -395,6 +415,10 @@
 				AA0000000000000000000852 /* Bilingual.swift in Sources */,
 				AA0000000000000000000853 /* Translator.swift in Sources */,
 				AA0000000000000000000854 /* ReceiptReader.swift in Sources */,
+				AA0000000000000000000855 /* FridayNotifier.swift in Sources */,
+				AA0000000000000000000856 /* ContactTool.swift in Sources */,
+				AA0000000000000000000857 /* EventService.swift in Sources */,
+				AA0000000000000000000858 /* MotionTool.swift in Sources */,
 				AA0000000000000000000841 /* AskFridayIntent.swift in Sources */,
 				AA0000000000000000000842 /* StartListeningIntent.swift in Sources */,
 				AA0000000000000000000803 /* FridayEngine.swift in Sources */,
@@ -526,6 +550,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = FRIDAY;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "FRIDAY reads your calendar to brief you on your day.";
+				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "FRIDAY adds events to your calendar when you confirm them.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "FRIDAY looks up numbers and birthdays when you ask. Contacts are read on-device and never leave your phone.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "FRIDAY reads your step count when you ask how far you have walked.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "FRIDAY reads documents you point the camera at. Recognition happens on-device.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FRIDAY uses your location for local weather.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FRIDAY listens for your voice commands.";
@@ -564,6 +591,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = FRIDAY;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "FRIDAY reads your calendar to brief you on your day.";
+				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "FRIDAY adds events to your calendar when you confirm them.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "FRIDAY looks up numbers and birthdays when you ask. Contacts are read on-device and never leave your phone.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "FRIDAY reads your step count when you ask how far you have walked.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "FRIDAY reads documents you point the camera at. Recognition happens on-device.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FRIDAY uses your location for local weather.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FRIDAY listens for your voice commands.";

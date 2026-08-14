@@ -51,6 +51,9 @@ final class FridayEngine {
     let speech = SpeechInput()
     let voice = SpeechOutput()
     let reminders: ReminderService
+    let events = EventService()
+    let contacts = ContactService()
+    let notifier = FridayNotifier()
     let language: LanguageEngine
     let translator = Translator()
     let liveActivity = LiveActivityController()
@@ -65,7 +68,10 @@ final class FridayEngine {
     init() {
         // The reminder service is shared: the tool stages into it, the UI
         // commits from it. The model can never write on its own.
-        let reminders = ReminderService()
+        //
+        // It holds the notifier because who nudges — FRIDAY or Apple Reminders
+        // — is decided at the moment the reminder is written, not before.
+        let reminders = ReminderService(notifier: notifier)
         self.reminders = reminders
         self.language = LanguageEngine(reminders: reminders)
 
@@ -274,7 +280,7 @@ final class FridayEngine {
     /// the worst failure an assistant has. Composing in Swift means the value
     /// is always right and "boss" is always present.
     private func lookup(_ intent: Intent) async -> String {
-        await Lookup.answer(for: intent, reminders: reminders)
+        await Lookup.answer(for: intent, reminders: reminders, events: events, contacts: contacts)
     }
 
     /// Runs a turn but gives up on it after 20 seconds.
@@ -501,6 +507,35 @@ final class FridayEngine {
     func cancelReminder() async {
         reminders.cancel()
         let line = await voiced("Dropped it, boss.", factual: false)
+        conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
+    }
+
+    // MARK: - Calendar events
+    //
+    // Same shape as reminders, deliberately. The model stages; a real press
+    // writes (D-34).
+
+    func confirmEvent() async {
+        let outcome = await voiced(await events.confirm(), factual: true)
+        guard !outcome.isEmpty else { return }
+        conversation.append(ConversationTurn(speaker: .friday, text: outcome, tone: "calm"))
+        await deliver(outcome)
+    }
+
+    func cancelEvent() async {
+        events.cancel()
+        let line = await voiced("Left it off, boss.", factual: false)
+        conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
+    }
+
+    // MARK: - Calling
+    //
+    // The only path that dials. `Router` has known phrasing gaps and a false
+    // positive here rings a real person, so the press is the safety.
+
+    func cancelCall() async {
+        contacts.cancelCall()
+        let line = await voiced("Left it, boss.", factual: false)
         conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
     }
 

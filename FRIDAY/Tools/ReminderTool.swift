@@ -25,6 +25,13 @@ final class ReminderService {
 
     private(set) var pending: Pending?
 
+    /// Who does the nudging. See `FridayNotifier.nudgesHimself`.
+    private let notifier: FridayNotifier
+
+    init(notifier: FridayNotifier) {
+        self.notifier = notifier
+    }
+
     func stage(title: String, when: String) {
         pending = Pending(title: title, dueDate: CalendarTool.firstDate(in: when))
     }
@@ -55,14 +62,29 @@ final class ReminderService {
         reminder.title = pending.title
         reminder.calendar = list
 
+        // Whether FRIDAY nudges, or Apple Reminders does. Exactly one of them
+        // should — two alerts for one reminder is worse than either alone.
+        var friday = false
+
         if let dueDate = pending.dueDate {
             reminder.dueDateComponents = Calendar.current.dateComponents(
                 [.year, .month, .day, .hour, .minute],
                 from: dueDate
             )
-            reminder.addAlarm(EKAlarm(absoluteDate: dueDate))
+
+            friday = await notifier.nudge(pending.title, at: dueDate)
+
+            // The alarm is the fallback, not the second alert. It is added when
+            // FRIDAY could not take the job — the toggle is off, notifications
+            // are denied, or the time has already passed — so the reminder still
+            // fires from somewhere rather than silently from nowhere.
+            if !friday {
+                reminder.addAlarm(EKAlarm(absoluteDate: dueDate))
+            }
         }
 
+        // Saved either way, alarm or no alarm. D-34's "a real press writes to a
+        // real store" holds, and the reminder outlives this app being deleted.
         do {
             try store.save(reminder, commit: true)
             return pending.dueDate == nil

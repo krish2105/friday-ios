@@ -5,6 +5,7 @@ struct ContentView: View {
     @Environment(FridayEngine.self) private var engine
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openURL) private var openURL
 
     @State private var availability = AIAvailability()
     @State private var appeared = false
@@ -72,6 +73,16 @@ struct ContentView: View {
                     .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85),
                                value: engine.reminders.pending)
 
+                eventConfirm
+                    .padding(.bottom, 12)
+                    .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85),
+                               value: engine.events.pending)
+
+                callConfirm
+                    .padding(.bottom, 12)
+                    .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85),
+                               value: engine.contacts.pendingCall)
+
                 errorBanner
                     .padding(.bottom, 12)
                     .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85),
@@ -127,7 +138,7 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView(output: engine.voice, translator: engine.translator)
+            SettingsView(output: engine.voice, notifier: engine.notifier, translator: engine.translator)
         }
         // Out-of-process picking, so this needs no photo library permission and
         // no usage string — the app only ever receives the one image he chose.
@@ -315,6 +326,51 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Calendar and call confirmation
+    //
+    // The same card as reminders, for the same reason: a 3B model must never be
+    // able to write to a real calendar or ring a real person on its own (D-34).
+    // `ConfirmCard` is the shared shell so all three read identically.
+
+    @ViewBuilder
+    private var eventConfirm: some View {
+        if let pending = engine.events.pending {
+            ConfirmCard(
+                icon: "calendar.badge.plus",
+                heading: "CONFIRM EVENT",
+                title: pending.title,
+                detail: pending.spokenWhen.prefix(1).uppercased() + pending.spokenWhen.dropFirst(),
+                confirmTitle: "Add it",
+                onCancel: { Task { await engine.cancelEvent() } },
+                onConfirm: { Task { await engine.confirmEvent() } }
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var callConfirm: some View {
+        if let pending = engine.contacts.pendingCall {
+            ConfirmCard(
+                icon: "phone.fill",
+                heading: "CONFIRM CALL",
+                title: pending.name,
+                detail: pending.number,
+                confirmTitle: "Call",
+                onCancel: { Task { await engine.cancelCall() } },
+                onConfirm: {
+                    // The only place the app dials. `tel:` hands off to the
+                    // system, which shows its own confirmation before ringing —
+                    // so even a mistaken press here is recoverable.
+                    let digits = pending.number.filter { $0.isNumber || $0 == "+" }
+                    if let url = URL(string: "tel://\(digits)") {
+                        openURL(url)
+                    }
+                    engine.contacts.cancelCall()
+                }
+            )
+        }
+    }
+
     // MARK: - Error banner
     //
     // The only route out of `.error`. Without it the state machine dead-ends
@@ -496,6 +552,77 @@ struct ContentView: View {
         case .speaking: "SPEAKING"
         case .error(let message): "ERROR — \(message.uppercased())"
         }
+    }
+}
+
+// MARK: - Confirmation card
+//
+// The shell behind every staged action — reminders, calendar entries, calls.
+// Shared so that a fourth one cannot drift into looking like a different app,
+// and so the amber "this needs your say-so" treatment reads consistently as
+// *the model has prepared something and is waiting*.
+
+private struct ConfirmCard: View {
+    var icon: String
+    var heading: String
+    var title: String
+    var detail: String
+    var confirmTitle: String
+    var onCancel: () -> Void
+    var onConfirm: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 9) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                Text(heading)
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .tracking(1.4)
+            }
+            .foregroundStyle(FridayTheme.amber)
+
+            Text(title)
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .foregroundStyle(FridayTheme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(detail)
+                .font(.system(size: 13, weight: .regular, design: .rounded))
+                .foregroundStyle(FridayTheme.textSecondary)
+
+            HStack(spacing: 10) {
+                Button(action: onCancel) {
+                    Text("Cancel")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 9)
+                        .foregroundStyle(FridayTheme.textSecondary)
+                        .background(Capsule().fill(Color.white.opacity(0.07)))
+                }
+
+                Button(action: onConfirm) {
+                    Text(confirmTitle)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 9)
+                        .foregroundStyle(FridayTheme.ground)
+                        .background(Capsule().fill(FridayTheme.amber))
+                }
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(FridayTheme.amber.opacity(0.10))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(FridayTheme.amber.opacity(0.34), lineWidth: 1)
+        )
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 }
 
