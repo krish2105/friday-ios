@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 struct ContentView: View {
@@ -10,6 +11,7 @@ struct ContentView: View {
     @State private var pulsing = false
     @State private var typed = ""
     @State private var showSettings = false
+    @State private var picked: PhotosPickerItem?
 
     private var status: AIStatus { availability.status }
     private var isListening: Bool { engine.state == .listening }
@@ -32,6 +34,11 @@ struct ContentView: View {
     }
 
     var body: some View {
+        // The picker's presentation lives on the engine, because the turn that
+        // raises it is routed there. `@Environment` hands back a plain value, so
+        // this is the documented way to get a Binding out of one.
+        @Bindable var engine = engine
+
         ZStack {
             VStack(spacing: 0) {
                 header
@@ -121,6 +128,37 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showSettings) {
             SettingsView(output: engine.voice)
+        }
+        // Out-of-process picking, so this needs no photo library permission and
+        // no usage string — the app only ever receives the one image he chose.
+        // That matters here: every capability this project has reached for has
+        // cost provisioning on a free account (D-32, D-46, D-52). This one is
+        // free.
+        .photosPicker(isPresented: $engine.showPhotoPicker,
+                      selection: $picked,
+                      matching: .images)
+        .onChange(of: picked) { _, item in
+            guard let item else { return }
+            // Cleared straight away so picking the same photo twice still
+            // fires — `onChange` only sees a *different* value.
+            picked = nil
+            Task {
+                let data = try? await item.loadTransferable(type: Data.self)
+                await engine.scan(data.map { [$0] } ?? [])
+            }
+        }
+        // Full screen rather than a sheet: the scanner needs the whole viewfinder
+        // to find the page edges, and a half-height card would fight it.
+        .fullScreenCover(isPresented: $engine.showCamera) {
+            DocumentCamera { pages in
+                engine.showCamera = false
+                // Backing out is not a failure and earns no line. An empty array
+                // from the *picker* does, which is why the check is here rather
+                // than inside `scan`.
+                guard !pages.isEmpty else { return }
+                Task { await engine.scan(pages) }
+            }
+            .ignoresSafeArea()
         }
     }
 

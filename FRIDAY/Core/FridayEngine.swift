@@ -1,3 +1,5 @@
+import AVFoundation
+import Foundation
 import Observation
 
 /// Single source of truth for app state. Views observe it; they never drive
@@ -25,6 +27,12 @@ final class FridayEngine {
     /// Message for the error banner. Set alongside `.error`, cleared when the
     /// user dismisses it or starts another turn.
     private(set) var alert: String?
+
+    /// Raised when a turn asks FRIDAY to read something. `ContentView` binds the
+    /// picker and the scanner to these, which is why they are not
+    /// `private(set)` — dismissing either has to be able to lower its own flag.
+    var showPhotoPicker = false
+    var showCamera = false
 
     let audioSession = AudioSessionManager()
     let speech = SpeechInput()
@@ -150,6 +158,20 @@ final class FridayEngine {
 
         // Swift routes; the model only speaks. See `Intent` for why.
         let intent = Router.intent(for: trimmed)
+
+        // Reading is the one route that needs something from the user before it
+        // can answer, so it cannot go through `Lookup` like the others.
+        // `raiseScanner` puts the camera or the picker up *before* the reply is
+        // spoken — `deliver` waits on the whole utterance, and it should already
+        // be sliding into view while she says this.
+        if case .scan(let source) = intent {
+            let answer = await raiseScanner(source)
+            conversation[replyIndex].text = answer
+            conversation[replyIndex].tone = "calm"
+            await deliver(answer)
+            return
+        }
+
         if case .chat = intent {} else {
             let answer = await lookup(intent)
             conversation[replyIndex].text = answer
@@ -239,6 +261,125 @@ final class FridayEngine {
                 continuation.resume(returning: .failure(LanguageEngineFailure.timedOut))
             }
         }
+    }
+
+    // MARK: - Reading
+
+    /// Longer than this and the text gets summarised instead of read out. A
+    /// sign, a label or a line off a receipt is quicker to just hear; a page is
+    /// not, and this is spoken aloud.
+    private static let readAloudLimit = 240
+
+    /// How much of a long document goes to the model. It shares a ~4,096 token
+    /// context with the persona and the conversation, and D-18's overflow path
+    /// can only reset the session — it cannot make the text fit.
+    private static let promptLimit = 4_000
+
+    /// Puts the right way of getting a picture on screen, and returns the line
+    /// FRIDAY says while it arrives.
+    ///
+    /// The camera falls back to the photo library rather than failing when the
+    /// scanner is unsupported — the Simulator, mostly, where a black screen and
+    /// no explanation would be the worst of both.
+    private func raiseScanner(_ source: ScanSource) async -> String {
+        guard source == .camera, DocumentCamera.isAvailable else {
+            showPhotoPicker = true
+            return "Show me, boss."
+        }
+
+        // Asked here, on the turn that needs it, exactly as the microphone is in
+        // `startListening`. The refusal is spoken rather than banner-ed because
+        // a turn is already in flight and it names the way back itself.
+        guard await AVCaptureDevice.requestAccess(for: .video) else {
+            return "Camera access is off, boss. Turn it back on in Settings → FRIDAY → Camera."
+        }
+
+        showCamera = true
+        return "Hold it steady, boss."
+    }
+
+    /// Text recognised from a picked image, answered like any other turn.
+    ///
+    /// The recognised text always goes on screen **verbatim, composed here in
+    /// Swift**. The model may summarise it aloud but can never replace what is
+    /// shown — same reasoning as D-44, where a quietly paraphrased number is the
+    /// worst failure an assistant has. A summary you can check against the text
+    /// beside it is a different thing from a summary you have to take on trust.
+    ///
+    /// `Data` rather than `CGImage` on purpose — see `TextScanner.text(in:)`.
+    /// An array because the document camera returns a page at a time; the photo
+    /// picker passes exactly one, and an empty array is a picture that would not
+    /// load, which earns the same in-character line as one that will not read.
+    func scan(_ pages: [Data]) async {
+        // Picking is quick enough to land while she is still saying "show me",
+        // and `.speaking` would otherwise fail the guard below and drop the
+        // scan silently. Same barge-in as reaching for the talk button.
+        if state == .speaking {
+            voice.stop()
+            state = .idle
+        }
+        guard state == .idle else { return }
+
+        showPhotoPicker = false
+        showCamera = false
+        alert = nil
+        state = .thinking
+
+        let text: String
+        do {
+            text = try await TextScanner.text(in: pages)
+        } catch {
+            // Only `ScanError` has a line FRIDAY can say. A raw Vision error
+            // must never reach him — CLAUDE.md's persona contract holds on the
+            // failure paths too, not just the happy one.
+            let line = (error as? TextScanner.ScanError)?.errorDescription
+                ?? "That one wouldn't read, boss."
+            conversation.append(ConversationTurn(speaker: .friday,
+                                                 text: Lookup.addressed(line),
+                                                 tone: "concerned"))
+            Haptics.failed()
+            await deliver(conversation[conversation.count - 1].text)
+            return
+        }
+
+        // Short enough to hear: one turn, spoken exactly as it is shown. The
+        // recognised text is carried through whole and unedited — the wrapper
+        // only puts "boss" in front of it, because the persona contract holds on
+        // this path as much as any other.
+        guard text.count > Self.readAloudLimit else {
+            let line = "Here's what it says, boss. \(text)"
+            conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
+            Haptics.replyReceived()
+            await deliver(line)
+            return
+        }
+
+        // Too long to hear: the text goes up on its own, unspoken, and the model
+        // gets a turn to say what it amounts to.
+        conversation.append(ConversationTurn(speaker: .friday, text: text, tone: "calm"))
+        conversation.append(ConversationTurn(speaker: .friday, text: "", tone: "calm"))
+        let replyIndex = conversation.count - 1
+
+        let ask = """
+        This is text I just read off a picture for the boss. Tell him what it \
+        says, in under three sentences.
+
+        \(text.prefix(Self.promptLimit))
+        """
+
+        switch await respondWithDeadline(ask) {
+        case .success(let reply):
+            conversation[replyIndex].text = reply.spoken
+            conversation[replyIndex].tone = reply.tone
+        case .failure(let error):
+            let failure = error as? LanguageEngineFailure
+                ?? .other(error.localizedDescription)
+            conversation[replyIndex].text = failure.spokenFallback
+            conversation[replyIndex].tone = "concerned"
+        }
+
+        Haptics.replyReceived()
+        await deliver(conversation[replyIndex].text)
     }
 
     // MARK: - Speaking

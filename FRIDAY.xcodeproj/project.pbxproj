@@ -42,6 +42,7 @@
 		AA0000000000000000000844 /* FridayListenControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000743 /* FridayListenControl.swift */; };
 		AA0000000000000000000841 /* AskFridayIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000741 /* AskFridayIntent.swift */; };
 		AA0000000000000000000850 /* TextScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000750 /* TextScanner.swift */; };
+		AA0000000000000000000851 /* DocumentCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000751 /* DocumentCamera.swift */; };
 		AA0000000000000000000840 /* Intent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000740 /* Intent.swift */; };
 		AA0000000000000000000830 /* FridayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071F /* FridayAttributes.swift */; };
 		AA0000000000000000000831 /* FridayLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000721 /* FridayLiveActivity.swift */; };
@@ -82,6 +83,7 @@
 		AA0000000000000000000743 /* FridayListenControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayListenControl.swift; sourceTree = "<group>"; };
 		AA0000000000000000000741 /* AskFridayIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskFridayIntent.swift; sourceTree = "<group>"; };
 		AA0000000000000000000750 /* TextScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextScanner.swift; sourceTree = "<group>"; };
+		AA0000000000000000000751 /* DocumentCamera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentCamera.swift; sourceTree = "<group>"; };
 		AA0000000000000000000740 /* Intent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intent.swift; sourceTree = "<group>"; };
 		AA0000000000000000000702 /* FridayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayState.swift; sourceTree = "<group>"; };
 		AA0000000000000000000703 /* FridayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayEngine.swift; sourceTree = "<group>"; };
@@ -234,6 +236,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000750 /* TextScanner.swift */,
+				AA0000000000000000000751 /* DocumentCamera.swift */,
 			);
 			path = Vision;
 			sourceTree = "<group>";
@@ -371,6 +374,7 @@
 				AA0000000000000000000802 /* FridayState.swift in Sources */,
 				AA0000000000000000000840 /* Intent.swift in Sources */,
 				AA0000000000000000000850 /* TextScanner.swift in Sources */,
+				AA0000000000000000000851 /* DocumentCamera.swift in Sources */,
 				AA0000000000000000000841 /* AskFridayIntent.swift in Sources */,
 				AA0000000000000000000842 /* StartListeningIntent.swift in Sources */,
 				AA0000000000000000000803 /* FridayEngine.swift in Sources */,
@@ -502,7 +506,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = FRIDAY;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "FRIDAY reads your calendar to brief you on your day.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Reserved for future visual input features.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "FRIDAY reads documents you point the camera at. Recognition happens on-device.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FRIDAY uses your location for local weather.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FRIDAY listens for your voice commands.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "FRIDAY creates reminders when you ask.";
@@ -540,7 +544,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = FRIDAY;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "FRIDAY reads your calendar to brief you on your day.";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Reserved for future visual input features.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "FRIDAY reads documents you point the camera at. Recognition happens on-device.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "FRIDAY uses your location for local weather.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FRIDAY listens for your voice commands.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "FRIDAY creates reminders when you ask.";

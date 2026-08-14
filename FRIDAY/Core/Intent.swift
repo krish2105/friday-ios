@@ -19,8 +19,19 @@ enum Intent: Equatable {
     case device(aspect: String)
     case calendar(day: String)
     case reminder(title: String, when: String)
+    /// Read whatever he's about to show me. Nothing to look up here — the image
+    /// comes from the UI, so `FridayEngine.scan` does the work.
+    case scan(source: ScanSource)
     /// Nothing to look up — hand it to the model.
     case chat
+}
+
+/// Where the picture comes from.
+enum ScanSource: Equatable {
+    /// He's holding the thing up. Point the camera at it.
+    case camera
+    /// It's already on the phone.
+    case library
 }
 
 enum Router {
@@ -32,6 +43,26 @@ enum Router {
 
         if contains(text, ["remind me", "reminder", "remember to", "don't let me forget"]) {
             return .reminder(title: reminderTitle(from: input), when: input)
+        }
+
+        // Every needle carries a demonstrative — "this", "that", "it". A bare
+        // "read" or "scan" would catch "did you read the news" and "scan the
+        // calendar for me", and putting a picker up on those is a much worse
+        // failure than falling through to chat.
+        if contains(text, ["read this", "read that", "read it", "scan this", "scan that",
+                           "what does this say", "what does that say", "what does it say",
+                           "what's this say", "whats this say", "what's it say", "whats it say"]) {
+            return .scan(source: scanSource(in: text))
+        }
+
+        // The same question with a noun wedged into it — "what does this receipt
+        // say", "what does that sign say" — slips past a contiguous needle, and
+        // the nouns are open-ended enough that listing them is hopeless. So the
+        // demonstrative and the verb are matched separately, and *both* are
+        // required: that is what keeps "what does that mean" out.
+        if contains(text, ["what does this", "what does that", "what's this", "whats this"]),
+           contains(text, [" say", "says"]) {
+            return .scan(source: scanSource(in: text))
         }
 
         if let aspect = deviceAspect(in: text) {
@@ -84,6 +115,23 @@ enum Router {
         return nil
     }
 
+    /// The camera unless he named something already on the phone.
+    ///
+    /// "Read this" with nothing else in it means he's holding a page up, and
+    /// making him go via the photo library to read a page in his hand is the
+    /// wrong default for something meant to be a daily driver.
+    ///
+    /// The needles are possessive on purpose. A bare "picture" would send "take
+    /// a picture of this and read it" to the photo library, which is the exact
+    /// opposite of what was asked.
+    private static func scanSource(in text: String) -> ScanSource {
+        contains(text, ["this photo", "that photo", "this picture", "that picture",
+                        "this screenshot", "that screenshot", "this image", "that image",
+                        "my photos", "camera roll", "photo library"])
+            ? .library
+            : .camera
+    }
+
     /// Strips the request wrapper so the reminder reads as the task itself:
     /// "remind me to call mom at 6pm" becomes "call mom at 6pm".
     ///
@@ -134,6 +182,13 @@ enum Lookup {
                     return "I didn't catch what to remind you about, boss."
                 }
                 return "That's \(pending.title), \(pending.spokenWhen), boss. Say the word and I'll add it."
+
+            case .scan:
+                // Only Siri arrives here. `FridayEngine` intercepts every `.scan`
+                // before the lookup, because reading needs a picture on screen
+                // and an App Intent has no way to put a picker up — the same
+                // shape of limit as the reminder case above.
+                return "I'd need to see it, boss. Open FRIDAY and show me."
 
             case .chat:
                 return ""
