@@ -61,6 +61,61 @@ final class FridayEngine {
         pendingLink = nil
     }
 
+    /// The one thing awaiting a press, if anything is.
+    ///
+    /// Four services can each have something staged, and modelling them as four
+    /// sibling cards let two be on screen at once, squeezing the conversation
+    /// between them. Precedence is **fixed and deliberate** rather than
+    /// most-recent-wins: two staged actions at once is rare, and a rule you can
+    /// read beats a timestamp you cannot.
+    ///
+    /// An error comes first because it is the only one that is *blocking* rather
+    /// than offered — everything else can wait behind a failure that needs
+    /// dismissing.
+    var pendingAction: PendingAction? {
+        if let alert { return .error(alert) }
+        if let call = contacts.pendingCall {
+            return .call(name: call.name, number: call.number)
+        }
+        if let pendingLink { return .link(pendingLink) }
+        if let reminder = reminders.pending {
+            return .reminder(
+                title: reminder.title,
+                detail: reminder.spokenWhen.prefix(1).uppercased() + reminder.spokenWhen.dropFirst()
+            )
+        }
+        if let event = events.pending {
+            return .event(
+                title: event.title,
+                detail: event.spokenWhen.prefix(1).uppercased() + event.spokenWhen.dropFirst()
+            )
+        }
+        return nil
+    }
+
+    /// Dismisses whatever is pending, whichever it is.
+    func cancelPending() async {
+        switch pendingAction {
+        case .error: dismissAlert()
+        case .call: await cancelCall()
+        case .link: cancelLink()
+        case .reminder: await cancelReminder()
+        case .event: await cancelEvent()
+        case .none: break
+        }
+    }
+
+    /// Commits whatever is pending. The link case is the view's, because opening
+    /// a URL belongs to the environment rather than the engine.
+    func confirmPending() async {
+        switch pendingAction {
+        case .reminder: await confirmReminder()
+        case .event: await confirmEvent()
+        case .error: dismissAlert()
+        case .call, .link, .none: break
+        }
+    }
+
     let audioSession = AudioSessionManager()
     let speech = SpeechInput()
     let voice = SpeechOutput()
@@ -623,7 +678,7 @@ final class FridayEngine {
            let extracted = await language.receipt(in: text),
            let receipt = ReceiptReader.verified(extracted, against: text) {
             let line = await voiced(ReceiptReader.sentence(for: receipt), factual: true)
-            conversation.append(ConversationTurn(speaker: .friday, text: Self.excerpt(of: text), tone: "calm"))
+            conversation.append(ConversationTurn(speaker: .friday, text: Self.excerpt(of: text), tone: "calm", kind: .quoted))
             conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
             Haptics.replyReceived()
             await deliver(line)
@@ -637,7 +692,7 @@ final class FridayEngine {
            let extracted = await language.boardingPass(in: text),
            let pass = BoardingPassReader.verified(extracted, against: text) {
             let line = await voiced(BoardingPassReader.sentence(for: pass), factual: true)
-            conversation.append(ConversationTurn(speaker: .friday, text: Self.excerpt(of: text), tone: "calm"))
+            conversation.append(ConversationTurn(speaker: .friday, text: Self.excerpt(of: text), tone: "calm", kind: .quoted))
             conversation.append(ConversationTurn(speaker: .friday, text: line, tone: "calm"))
             Haptics.replyReceived()
             await deliver(line)
@@ -661,7 +716,7 @@ final class FridayEngine {
 
         // Too long to hear: the text goes up on its own, unspoken, and the model
         // gets a turn to say what it amounts to.
-        conversation.append(ConversationTurn(speaker: .friday, text: Self.excerpt(of: text), tone: "calm"))
+        conversation.append(ConversationTurn(speaker: .friday, text: Self.excerpt(of: text), tone: "calm", kind: .quoted))
         conversation.append(ConversationTurn(speaker: .friday, text: "", tone: "calm"))
         let replyIndex = conversation.count - 1
 

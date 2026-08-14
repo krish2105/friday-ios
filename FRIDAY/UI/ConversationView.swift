@@ -73,7 +73,16 @@ private struct TurnBubble: View {
         }
     }
 
+    @ViewBuilder
     private var bubble: some View {
+        if turn.kind == .quoted {
+            quotation
+        } else {
+            speech
+        }
+    }
+
+    private var speech: some View {
         Text(displayText)
             .font(.system(size: 16, weight: .regular, design: .rounded))
             .foregroundStyle(FridayTheme.textPrimary)
@@ -95,5 +104,29 @@ private struct TurnBubble: View {
             )
             .accessibilityLabel(turn.isFriday ? "FRIDAY said" : "You said")
             .accessibilityValue(displayText)
+    }
+
+    /// Words off a page, not out of her mouth.
+    ///
+    /// A leading rule and no tone tint, because tone is *her* mood and a
+    /// document does not have one. Monospaced because it is a transcript, and
+    /// because it makes a receipt's columns line up instead of collapsing into
+    /// prose.
+    private var quotation: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Capsule()
+                .fill(FridayTheme.textSecondary.opacity(0.35))
+                .frame(width: 2)
+
+            Text(displayText)
+                .font(.system(size: 13, weight: .regular, design: .monospaced))
+                .foregroundStyle(FridayTheme.textSecondary)
+                .lineSpacing(2)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 4)
+        .accessibilityLabel("Text read from the page")
+        .accessibilityValue(displayText)
     }
 }

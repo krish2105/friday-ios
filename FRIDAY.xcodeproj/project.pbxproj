@@ -57,6 +57,10 @@
 		AA000000000000000000085D /* PDFReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000075D /* PDFReader.swift */; };
 		AA000000000000000000085E /* Deadline.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000075E /* Deadline.swift */; };
 		AA000000000000000000085F /* FridaySnippet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000075F /* FridaySnippet.swift */; };
+		AA0000000000000000000860 /* ActionSlot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000760 /* ActionSlot.swift */; };
+		AA0000000000000000000861 /* InputBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000761 /* InputBar.swift */; };
+		AA0000000000000000000862 /* StatusHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000762 /* StatusHeader.swift */; };
+		AA0000000000000000000863 /* CapabilitiesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000763 /* CapabilitiesSheet.swift */; };
 		AA0000000000000000000840 /* Intent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000740 /* Intent.swift */; };
 		AA0000000000000000000830 /* FridayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000071F /* FridayAttributes.swift */; };
 		AA0000000000000000000831 /* FridayLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000721 /* FridayLiveActivity.swift */; };
@@ -112,6 +116,10 @@
 		AA000000000000000000075D /* PDFReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFReader.swift; sourceTree = "<group>"; };
 		AA000000000000000000075E /* Deadline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Deadline.swift; sourceTree = "<group>"; };
 		AA000000000000000000075F /* FridaySnippet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridaySnippet.swift; sourceTree = "<group>"; };
+		AA0000000000000000000760 /* ActionSlot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionSlot.swift; sourceTree = "<group>"; };
+		AA0000000000000000000761 /* InputBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputBar.swift; sourceTree = "<group>"; };
+		AA0000000000000000000762 /* StatusHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusHeader.swift; sourceTree = "<group>"; };
+		AA0000000000000000000763 /* CapabilitiesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapabilitiesSheet.swift; sourceTree = "<group>"; };
 		AA0000000000000000000740 /* Intent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intent.swift; sourceTree = "<group>"; };
 		AA0000000000000000000702 /* FridayState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayState.swift; sourceTree = "<group>"; };
 		AA0000000000000000000703 /* FridayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FridayEngine.swift; sourceTree = "<group>"; };
@@ -228,6 +236,10 @@
 				AA000000000000000000070E /* TalkButton.swift */,
 				AA0000000000000000000713 /* ConversationView.swift */,
 				AA0000000000000000000716 /* SettingsView.swift */,
+				AA0000000000000000000760 /* ActionSlot.swift */,
+				AA0000000000000000000761 /* InputBar.swift */,
+				AA0000000000000000000762 /* StatusHeader.swift */,
+				AA0000000000000000000763 /* CapabilitiesSheet.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -447,6 +459,10 @@
 				AA000000000000000000085D /* PDFReader.swift in Sources */,
 				AA000000000000000000085E /* Deadline.swift in Sources */,
 				AA000000000000000000085F /* FridaySnippet.swift in Sources */,
+				AA0000000000000000000860 /* ActionSlot.swift in Sources */,
+				AA0000000000000000000861 /* InputBar.swift in Sources */,
+				AA0000000000000000000862 /* StatusHeader.swift in Sources */,
+				AA0000000000000000000863 /* CapabilitiesSheet.swift in Sources */,
 				AA0000000000000000000841 /* AskFridayIntent.swift in Sources */,
 				AA0000000000000000000842 /* StartListeningIntent.swift in Sources */,
 				AA0000000000000000000803 /* FridayEngine.swift in Sources */,

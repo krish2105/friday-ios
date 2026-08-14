@@ -1,6 +1,6 @@
 # FRIDAY iOS — Handover
 
-**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-09, D-45, D-53–D-62, §10)
+**Written:** 2026-08-14 (rewritten) · **Updated:** 2026-08-15 (§3, §4, D-09, D-45, D-53–D-63, §10)
 **Repo state:** `main`, stage 3 landed at `15bca6f` · **Commits:** 47
 
 This replaces the previous handover, which was written by a cloud session with no Swift
@@ -92,7 +92,7 @@ session was diagnosed this way in about a minute.
 
 ## 3. What is built
 
-51 Swift files across two targets.
+56 Swift files across two targets.
 
 | Dir | Files | Contents |
 |---|---|---|
@@ -101,7 +101,7 @@ session was diagnosed this way in about a minute.
 | `Intelligence/` | 3 | `Availability`, `Generables`, `LanguageEngine` |
 | `Speech/` | 3 | `AudioSessionManager`, `SpeechInput`, `SpeechOutput` |
 | `Tools/` | 8 | `FridayTool`, `TimeTool`, `DeviceTool`, `WeatherTool`, `CalendarTool`, `ReminderTool`, `ContactTool`, `MotionTool` |
-| `UI/` | 9 | `ContentView`, `ConversationView`, `OrbView`, `TalkButton`, `SettingsView`, `AmbientBackground`, `GlassSurface`, `FridayTheme`, `Haptics` |
+| `UI/` | 13 | `ContentView`, `ConversationView`, `OrbView`, `TalkButton`, `SettingsView`, `AmbientBackground`, `GlassSurface`, `FridayTheme`, `Haptics`, **`ActionSlot`**, **`InputBar`**, **`StatusHeader`**, **`CapabilitiesSheet`** |
 | `LiveActivity/` | 3 | `FridayAttributes`, `LiveActivityController`, `FridayLiveActivity` |
 | `Intents/` | 3 | `AskFridayIntent` (+ `FridayAnswer`, `FridayShortcuts`), `StartListeningIntent`, `FridaySnippet` |
 | `Vision/` | 7 | `TextScanner`, `DocumentCamera`, `ReceiptReader`, `BoardingPassReader`, `BarcodeReader`, `LiveScanner`, `PDFReader` |
@@ -665,6 +665,44 @@ The old §8 still stands except where noted. New decisions from device work:
   deliberately plain and `lineLimit(8)`: it is laid out by another process, the ambient field
   and `.glassEffect` both assume a full screen behind them, and D-61 applies to any view
   rendering text this app did not choose the length of.
+
+- **D-63 · Stage 8 — the redesign, organised around what may not move.**
+
+  The problem was measured, not felt: `ContentView` was **721 lines**, **seven** views
+  competed for one vertical slot, and the whole app had **three** discoverable controls. The
+  third is the one that mattered — sixteen capabilities reachable only by a phrase you
+  already knew. The app had got far more capable and no more usable.
+
+  **The organising rule is D-50 turned into a design principle: at rest, nothing moves.**
+  Glass re-samples whatever animates beneath it, which is how idle CPU went 8% → 2%. So
+  morphing happens only on transitions and direct interaction. That is also in character —
+  a composed assistant does not fidget.
+
+  - **`ActionSlot`** replaces four sibling confirm cards and the error banner with one slot
+    carrying a `glassEffectID`, so the shape persists and its contents morph. Precedence is
+    fixed and documented (**error → call → link → reminder → event**) rather than
+    most-recent-wins: two staged actions at once is rare, and a rule you can read beats a
+    timestamp you cannot. An error sorts first because it is the only one that is *blocking*
+    rather than offered.
+  - **`InputBar`'s action row** is the discoverability fix, and the most valuable part of the
+    stage. Camera, code and files raise exactly what `Router` raises — a button and a phrase
+    are two routes to one place, not two implementations. **Translate pre-fills the phrase
+    instead of acting**, because its wording is worth teaching: press it once and you know
+    how to ask aloud thereafter.
+  - **`CapabilitiesSheet`** lists all sixteen with the words that invoke them. With
+    keyword routing, a capability exists exactly as far as someone knows how to ask for it,
+    so the phrasing *is* the interface and hiding it was the bug.
+  - **`ConversationTurn.kind`** distinguishes `.speech` from `.quoted`. Recognised text used
+    to render identically to FRIDAY talking, which was wrong twice: it is not her voice, and
+    since D-61 it may be a truncated excerpt.
+
+  `ContentView` is **329 lines**, from 721. The spec said under 300 and that was missed by 29
+  — the remainder is the declarative body and five picker/sheet modifiers, which belong at
+  the composition root. Recorded rather than papered over.
+
+  **Outstanding acceptance criterion: Release idle CPU.** A Release build is installed and the
+  number is unmeasured. If the redesign costs D-50's 2%, the stage is not done — that is the
+  criterion that can fail it, and it is owner-measured because it needs Xcode's gauge.
 
 ### D-18 is now probably unreachable — do not delete it, do not trust it
 
