@@ -431,17 +431,6 @@ struct ContentView: View {
             Text("SYSTEM")
             Circle().frame(width: 2.5, height: 2.5)
             Text(engineStateLabel)
-
-            // Temporary Live Activity diagnostic. Remove once Session 6 is
-            // verified — both failure paths in LiveActivityController were
-            // silent, so "nothing appears in the Dynamic Island" gave nothing
-            // to go on.
-            if let failure = engine.liveActivity.lastFailure {
-                Circle().frame(width: 2.5, height: 2.5)
-                Text("LA: \(failure)")
-                    .foregroundStyle(FridayTheme.fault)
-                    .lineLimit(2)
-            }
         }
         .font(.system(size: 10, weight: .medium, design: .monospaced))
         .tracking(1.6)
