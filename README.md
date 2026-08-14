@@ -1,156 +1,224 @@
-# FRIDAY
+<div align="center">
 
-A native iOS voice assistant that runs entirely on-device. No API keys, no network, no cost.
+<img src="FRIDAY/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="120" alt="FRIDAY">
 
-Built for iPhone 16 Pro on iOS 26 using Apple's Foundation Models framework and the iOS 26 Speech stack.
+# F.R.I.D.A.Y.
+
+**A voice assistant that runs entirely on your iPhone.**
+No server. No API key. No network. No cost.
+
+`Swift 6` · `iOS 26` · `Foundation Models` · `SpeechAnalyzer` · `SwiftUI`
+
+</div>
+
+---
+
+Hold the orb and speak. FRIDAY transcribes on-device, works out whether the question needs
+real data, calls actual Swift code, and answers aloud — in airplane mode, on a plane, with
+the network stack switched off entirely.
+
+```
+speech  →  SpeechAnalyzer  →  Router  →  Tool          →  reply  →  AVSpeechSynthesizer
+           on-device STT      Swift      Swift code        text      on-device TTS
+                                  ↘
+                                    Foundation Models    ← conversation only
+                                    on-device ~3B
+```
+
+---
+
+## Why this is interesting
+
+Most "AI assistants" are a text field wrapped around someone else's API. This one has no
+network code in it at all.
+
+| | FRIDAY | Typical cloud assistant |
+|---|---|---|
+| Latency | No round-trip | Round-trip per turn |
+| Running cost | £0 | Per-token, forever |
+| Privacy | Audio never leaves the device | Audio uploaded |
+| Offline | Fully functional | Dead |
+| Works if the vendor dies | Yes | No |
+
+The honest trade: the on-device model is ~3B parameters and tuned for utility, not world
+knowledge. The architecture compensates by pushing facts into tools rather than trusting
+recall — and by not letting the model make routing decisions at all.
+
+---
+
+## The architecture decision worth reading
+
+**Swift decides which tool runs. The model only speaks.**
+
+The original design followed Apple's `Tool` protocol — register tools, let the model choose.
+On device, with five tools registered, the model answered *"what can you do"* with the battery
+level, sent *"what time is it"* to the reminder tool, and staged a reminder titled
+*"What time is it?"*. Three rounds of prompt tuning did not fix it. Tool selection is not
+something a model this size does reliably.
+
+So routing moved into `Core/Intent.swift`. Swift matches intent, calls the tool, and composes
+the sentence. The model keeps the one job it is genuinely good at: phrasing a conversational
+reply.
+
+Three consequences:
+
+1. **Mis-routing is impossible**, not merely less likely — a tool cannot fire on a turn that
+   was not routed to it.
+2. **Numbers cannot be paraphrased into different numbers.** Factual sentences are built in
+   Swift, so a small model rewording "80%" into "about 85%" is structurally unreachable.
+3. **The session registers no tools**, handing the persona and conversation the entire
+   ~4,096-token budget four schemas used to share.
+
+And the one nobody planned: **with Apple Intelligence switched off, "what time is it" still
+works.** Only conversation degrades. Half the app stopped depending on the model at all.
+
+> This deliberately deviates from the original spec, which had the model choosing. The
+> reasoning, and the device evidence behind it, is in [`docs/PORTFOLIO.md`](docs/PORTFOLIO.md).
 
 ---
 
 ## What it does
 
-Hold to talk. FRIDAY transcribes on-device, decides whether she needs a tool, calls real Swift code, and answers aloud in persona — all without a network connection.
-
-```
-speech → SpeechAnalyzer → Foundation Models → Tool → reply → AVSpeechSynthesizer
-         (on-device STT)   (on-device ~3B)    (Swift)         (on-device TTS)
-```
-
----
-
-## Why on-device
-
-| | On-device (this build) | Cloud LLM |
-|---|---|---|
-| Latency | No network round-trip | Round-trip per turn |
-| Cost | Zero | Per-token |
-| Privacy | Audio never leaves the phone | Audio leaves the phone |
-| Offline | Works in airplane mode | Doesn't work |
-| Knowledge depth | Limited (~3B params) | Deep |
-
-The tradeoff is real: the on-device model is tuned for utility, not world knowledge. The architecture compensates by pushing facts into tools rather than relying on model recall.
-
----
-
-## Stack
-
-| Layer | Framework |
+| Capability | Notes |
 |---|---|
-| Speech to text | `SpeechAnalyzer` + `SpeechTranscriber` (iOS 26) |
-| Voice activity | `AVAudioEngine` RMS (see Known limitations) |
-| Reasoning | `FoundationModels` → `SystemLanguageModel` |
-| Structured output | `@Generable` / `@Guide` macros |
-| Intent routing | Swift keyword matching (see Measured) |
-| Text to speech | `AVSpeechSynthesizer` |
-| UI | SwiftUI, Swift 6 strict concurrency |
-| Ambient UI | ActivityKit (Dynamic Island) |
-| System hooks | App Intents (Siri) |
+| **Live transcription** | Words appear *as you speak*, not after you finish |
+| **Conversation** | On-device ~3B model, FRIDAY persona, typed output via `@Generable` |
+| **Spoken replies** | `AVSpeechSynthesizer`, with barge-in — press the orb to cut her off |
+| **Time & date** | Locale and timezone aware |
+| **Device** | Battery, storage, connectivity, thermal state |
+| **Calendar** | Read today's or tomorrow's events |
+| **Reminders** | Staged only — a real button press commits the write |
+| **Document reading** | On-device OCR via Vision — *in progress* |
+
+**Reminders never write on their own.** The model can only *stage* a reminder;
+`EKEventStore.save` is reachable solely from the **Add it** button. A 3B model misjudging a
+turn must never be able to put junk in someone's real Reminders.
 
 ---
 
-## System integration
+## Getting to it
 
 Three entry points. iOS does not permit a persistent background wake-word listener for
-third-party apps, and this app documents that constraint rather than faking it with
-background audio modes.
+third-party apps — this app documents that constraint rather than faking it with background
+audio modes.
 
-- **Push-to-talk** — hold the orb.
-- **Siri / Shortcuts** — "Hey Siri, ask FRIDAY", then the question. The question cannot be
-  part of the phrase: App Intents only allows `AppEntity` and `AppEnum` parameters in a
-  spoken phrase, and an open question is neither.
-- **Control Centre / Lock Screen** — both open FRIDAY straight into listening. The Lock
-  Screen widget is a launcher rather than a display, because reading app data from a widget
-  needs an App Group, which requires a paid developer account.
+- **Push-to-talk** — hold the orb
+- **Siri** — *"Hey Siri, ask FRIDAY"*, then your question
+- **Control Centre & Lock Screen** — both open FRIDAY already listening
 
-## Measured
+> Siri cannot take the question in the same breath. App Intents permits only `AppEntity` and
+> `AppEnum` parameters inside a spoken phrase, and an open question is neither. A canned
+> `AppEnum` would buy the one-shot phrasing at the cost of only ever answering a fixed list.
 
-- **Idle CPU 2%** in a Release build on iPhone 16 Pro, against a 5% budget. Getting there
-  meant finding that Liquid Glass re-samples anything animating beneath it, so three
-  continuous idle animations had to stop — including the orb's resting pulse.
-- **Tool routing is done in Swift, not by the model.** The on-device ~3B model mis-routed
-  badly enough to answer "what can you do" with the battery level, so intent matching moved
-  into code and the model kept only conversational phrasing.
+---
+
+## Measured, not claimed
+
+| | |
+|---|---|
+| Idle CPU | **2%** (Release, iPhone 16 Pro) against a 5% budget |
+| Memory | ~21 MB |
+| Network calls | 0 |
+| Build | 0 errors, 0 warnings under `SWIFT_STRICT_CONCURRENCY = complete` |
+| Defects found on device | 16 — none catchable by the compiler |
+
+Getting idle CPU from 8% to 2% meant discovering that **Liquid Glass re-samples anything
+animating beneath it**. Three continuous animations ran on a screen where nothing was
+happening. Details in [`docs/PORTFOLIO.md`](docs/PORTFOLIO.md).
+
+---
+
+## Verified on hardware
+
+Every criterion was tested on a physical iPhone 16 Pro. Nothing here is claimed from a
+Simulator run — Foundation Models does not work there.
+
+Including the failure modes, several by deliberately breaking things:
+
+- Apple Intelligence off · microphone denied · calendar denied · speech assets failing
+- Airplane mode · phone call mid-transcription · ten-plus conversation turns
+- A wedged turn — bounded by a 20-second deadline, because a stuck state made the app
+  unusable until relaunch
+
+---
 
 ## Requirements
 
-- iPhone 15 Pro or newer (Foundation Models needs A17 Pro+)
-  - Verified only on iPhone 16 Pro. A17 Pro is the real hardware gate, so
-    15 Pro and 15 Pro Max should work, but that is untested.
-- iOS 26.0 or later
-- **Apple Intelligence enabled** in Settings — the app will not function otherwise
-- Xcode 26 with the iOS 26 SDK
-- macOS 26 or later to build
-
----
+- **iPhone 15 Pro or newer** — A17 Pro is the real Foundation Models gate
+  *(verified only on iPhone 16 Pro)*
+- **iOS 26.0+**
+- **Apple Intelligence enabled** — the app reports clearly if it is not
+- Xcode 26, macOS 26 to build
 
 ## Build
 
 ```bash
-git clone https://github.com/krish2105/friday-ios.git
-cd friday-ios
 open FRIDAY.xcodeproj
 ```
 
-Select your physical iPhone as the run destination and build. **The Simulator will not work** — Foundation Models is unavailable there.
+Select your physical iPhone and run. **The Simulator will not work.**
 
-On first launch the app checks model availability and reports clearly if Apple Intelligence is disabled or the device is ineligible.
+If `xcode-select` points at the Command Line Tools, build from the terminal without sudo:
 
----
-
-## Tools
-
-| Tool | Capability |
-|---|---|
-| Time | Current date and time, locale-aware |
-| Device | Battery, storage, connectivity, thermal state |
-| ~~Weather~~ | Written, **not registered** — WeatherKit needs a paid account |
-| Calendar | Read today's events, next event |
-| Reminders | Staged only; a real button press commits the write |
-
-**Swift decides when a tool is needed, not the model** — see Measured. Factual answers are composed in Swift so a number can never be paraphrased into a different one. Tool names never appear in spoken output.
-
----
-
-## Architecture notes
-
-`FridayEngine` is a single `@Observable` state machine and the only source of truth:
-
+```bash
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+xcodebuild -project FRIDAY.xcodeproj -scheme FRIDAY \
+  -destination 'generic/platform=iOS' -allowProvisioningUpdates build
 ```
-idle → listening → thinking → (toolExecuting → thinking)* → speaking → idle
-```
-
-Views observe engine state. Views never touch speech or model APIs directly.
 
 ---
 
 ## Known limitations
 
-**No always-on wake word.** iOS does not permit third-party apps to run persistent background audio capture for wake-word detection. This is a platform constraint, not an implementation gap. Entry points are push-to-talk, Siri via App Intents, and a Control Center control.
+Each of these is a decision with a stated trade-off, not an oversight.
 
-**Limited world knowledge.** The on-device model is roughly 3B parameters and tuned for summarisation, classification, and extraction — not factual recall. Anything requiring current or specific facts goes through a tool.
+**No always-on wake word.** iOS does not allow third-party background audio capture for
+wake-word detection. Push-to-talk, Siri and Control Centre are the legitimate entry points.
 
-**Device gated.** iPhone 14 and older cannot run Foundation Models. The app detects this and explains it rather than failing silently.
+**Limited world knowledge.** ~3B parameters, tuned for summarisation and extraction rather
+than recall. Anything factual goes through a tool, and she declines rather than inventing.
 
-**No `SpeechDetector`.** Voice activity comes from `AVAudioEngine` RMS instead. `SpeechDetector` did not conform to `SpeechModule` when this was written — an Apple bug, since fixed — and push-to-talk governs the turn regardless.
+**Keyword routing has gaps.** Unanticipated phrasings fall through to conversation. That is
+deliberate: predictable and wrong in obvious ways beats unpredictable and wrong in surprising
+ways.
 
-**Voice quality depends on a manual download.** Siri's voices are not available to third-party apps through `AVSpeechSynthesizer` — an Apple restriction, not an implementation gap. The best obtainable are the Premium and Enhanced system voices, each a 100 MB+ download the user installs from Settings → Accessibility → Live Speech → Voices. There is no API to offer those downloads in-app, so FRIDAY picks the best voice already present and tells you where to find better ones. On a device with only Standard voices she sounds noticeably more synthetic.
+**Conversations are ephemeral.** Nothing is written to disk — audio never leaves the phone and
+transcripts never touch storage.
+
+**Voice quality needs a manual download.** Siri's voices are not available to third-party apps
+through `AVSpeechSynthesizer` — an Apple restriction. The best obtainable are the Premium and
+Enhanced system voices, installed from Settings → Accessibility → Live Speech → Voices.
+
+**Free-account constraints.** WeatherKit, App Groups and HealthKit all require a paid
+membership; adding those entitlements breaks provisioning outright. So `WeatherTool` is
+written but unregistered, and the Lock Screen widget is a launcher rather than a display.
+Builds also expire every 7 days.
 
 ---
 
-## Phase 2 (optional, not shipped)
+## Documentation
 
-An optional remote-brain mode bridges to a Python LiveKit + FastMCP agent on a local Mac for queries needing web access and a larger model. It sits behind a settings toggle, falls back to on-device when unreachable, and is **not** required for any Phase 1 feature.
-
-This mode is for personal use and is not App Store eligible, since it depends on a machine on the local network.
-
----
-
-## Engineering write-up
-
-The decisions, the things that turned out to be wrong, and what the device proved that the
-compiler could not: **[docs/PORTFOLIO.md](docs/PORTFOLIO.md)**.
+| | |
+|---|---|
+| [`docs/PORTFOLIO.md`](docs/PORTFOLIO.md) | The engineering write-up — decisions, and the things that turned out to be wrong |
+| [`docs/HANDOVER.md`](docs/HANDOVER.md) | Current state, decision log, and how to build, deploy and debug this |
+| [`CLAUDE.md`](CLAUDE.md) | Project rules |
 
 ---
 
-## Author
+## Roadmap
 
-Krishna Mathur — [krishnamathur-ai.vercel.app](https://krishnamathur-ai.vercel.app)
+- [x] On-device speech, reasoning, tools, voice
+- [x] Live Activity, Dynamic Island, haptics
+- [x] App Intents, Siri, Control Centre, Lock Screen widget
+- [ ] Document reading — camera OCR and structured extraction
+- [ ] Contacts, richer Shortcuts actions, Apple Watch companion
+- [ ] Optional remote brain over LiveKit *(personal use, not App Store eligible)*
+
+---
+
+<div align="center">
+
+**Krishna Mathur** · [krishnamathur-ai.vercel.app](https://krishnamathur-ai.vercel.app)
+
+</div>
