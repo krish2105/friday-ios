@@ -353,5 +353,5 @@ version abandons the losing side instead. A stranded task is a small leak; a str
 | Memory | ~21 MB |
 | Network calls | 0 |
 | API cost | £0 |
-| Routing cases under test | 100, re-run on every change |
+| Routing cases under test | 155, re-run on every change, compiled against the real router |
 | Defects found on device | 21, none catchable by the compiler |

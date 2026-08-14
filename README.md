@@ -96,6 +96,11 @@ works.** Only conversation degrades. Half the app stopped depending on the model
 | **Contacts** | *"call mom"* — matches nicknames and relationships, not just filed names |
 | **Steps** | Steps, distance, flights — via CoreMotion, no HealthKit needed |
 | **Reading things** | Camera, photos, PDFs or a live viewfinder → on-device OCR |
+| **Tables kept as tables** | Receipts and statements keep their rows and columns, not flattened to a blob |
+| **Translating what you see** | Point at a menu in a language you don't read — the words come back in yours |
+| **Naming what you see** | No text in the shot? She says what's in it instead of "no text found" |
+| **Naming what you hear** | 303 sounds on-device — a smoke alarm, a doorbell, a baby, breaking glass |
+| **Knowing what you're doing** | Walking, driving, cycling — and she won't raise a camera at the wheel |
 | **Receipts & boarding passes** | Structured extraction, every field checked against the page |
 | **QR & barcodes** | Reads them; never opens anything without a press |
 | **Hindi** | Type in Hindi, hear Hindi back — on-device translation both ways |
@@ -139,8 +144,23 @@ audio modes.
 | Memory | ~21 MB |
 | Network calls | 0 |
 | Build | 0 errors, 0 warnings under `SWIFT_STRICT_CONCURRENCY = complete` |
-| Routing cases under test | 100, re-run on every change |
+| Routing cases under test | 155, re-run on every change, compiled against the real router |
 | Defects found on device | 18 — none catchable by the compiler |
+| Features dropped on measurement | 4 |
+
+Four features were **built to the point of measurement and then dropped**, which is the part
+of the record worth reading:
+
+| Dropped | Why |
+|---|---|
+| Foundation Models vision | No image segment exists in `Transcript.Segment` — the API cannot take a picture |
+| `NLLanguageRecognizer` routing | Called romanised Hindi Dutch, Indonesian and Finnish across three tries |
+| `NLEmbedding` semantic routing | *"Tell me a joke"* scored **0.944** against the scan phrase — closer than a correct match at 0.964. No threshold separates them |
+| App Groups (widget data) | Confirmed blocked on a free account despite Apple's table saying otherwise |
+
+The language recogniser was later **re-measured for a different job** — detecting the language
+of a *scanned page* rather than a spoken phrase — and scored **8/8 at ≥0.998 confidence**. The
+first verdict stood for what it tested; it did not transfer. Both results are in the code.
 
 Getting idle CPU from 8% to 2% meant discovering that **Liquid Glass re-samples anything
 animating beneath it**. Three continuous animations ran on a screen where nothing was

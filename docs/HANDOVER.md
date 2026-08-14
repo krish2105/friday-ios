@@ -996,6 +996,103 @@ call, not the next session's.
 
 ---
 
+### D-74 — sight translation is routed *first*, and that order is measured
+
+`Router` now has **three** translation shapes, and the order between them is not a
+preference. Measured, in this order of discovery:
+
+| Placement | What broke |
+|---|---|
+| After `translationRequest` | `"translate this menu into Hindi"` → a request to translate the literal words *"this menu"*. A sight noun reads perfectly well as a phrase. |
+| After mode entry | Swallowed whole — `"translate this menu"` contains no phrase either, which is mode entry's own definition. |
+| **First** | Correct. |
+
+That second row is the *same bug* that lost `"translate into Hindi where is the station"`,
+one rung further down the table. The gate is narrow on purpose — a translate cue, a
+demonstrative, **and** a word for a thing you can point a camera at. `"Translate this into
+Hindi"` is deliberately left alone and still enters mode: with no such noun it is genuinely
+ambiguous, and the established reading wins rather than being quietly changed.
+
+### D-75 — `NLLanguageRecognizer` was re-measured for a different job, and passed
+
+The stage-9 verdict — *romanised Hindi comes back Dutch, Indonesian, Finnish* — **stands for
+what it tested**. It does not transfer to a scanned page, which is native script and long.
+Re-measured on eight page-length samples: **8/8, ≥0.998 confidence on every non-English
+case**.
+
+The English receipt scored **0.561**, and that number is the whole reason
+`SightTranslator.confidenceFloor` exists — Latin-script languages share enough vocabulary
+that six short till lines are genuinely ambiguous, and a confident wrong guess would
+translate an English receipt *out of* English.
+
+**The lesson to carry forward:** a measurement retires a technique *for a task*, not
+forever. Both results are cited in the code they justify.
+
+### D-76 — exact confidence ties mean one label reported twice
+
+`ClassifyImageRequest` returns overlapping labels. Measured on real photographs:
+
+```
+coastline:      outdoor 0.921   sky 0.915   cloudy 0.896   rocks 0.663   structure 0.663
+rendered page:  document 0.713  printed_page 0.713
+```
+
+Genuinely distinct labels are never *exactly* equal — 0.921 / 0.915 / 0.896 are close and all
+different. An exact tie to three decimals means the classifier is reporting one node under two
+names. Keeping the first and dropping the rest is what stopped FRIDAY saying *"a document and
+a printed page"*.
+
+### D-77 — the sound classifier names something even when fed silence
+
+Measured against `SNAudioFileAnalyzer`:
+
+| Input | Top class | Confidence |
+|---|---|---|
+| six seconds of digital silence | `music` | **0.248** |
+| white noise | `music` | 0.133 |
+| 440 Hz sine | `music` / `tuning_fork` | 0.785 / 0.505 |
+
+Row one is the argument for `SoundListener.confidenceFloor`. Fed *nothing at all* the
+classifier still names a class and gives it a quarter of its confidence, so a floor is the
+only thing between "I heard a dog" and "I heard nothing and said dog anyway".
+
+The sine was **not** treated as a false positive — a 440 Hz tone genuinely is a tuning fork,
+and reading it as noise would have set the floor far too high and deafened the feature.
+
+### D-78 — `request(_:didProduce:)`, not the header's spelling
+
+`SNResultsObserving`'s required member is `request:didProduceResult:` in the ObjC header and
+**renamed by Swift** to `request(_:didProduce:)`. The header spelling does not compile, which
+is the good case — it is the one *required* member. Its two siblings, `didFailWithError` and
+`requestDidComplete`, are `@optional`, so misspelling **those** compiles with a warning only.
+
+That is the VisionKit trap from session 8 exactly, in a new framework: an optional requirement
+silently unfulfilled. Check every delegate seam against the `.swiftinterface`, not the header.
+
+### D-79 — FRIDAY will not raise a camera while you are driving
+
+The only place in this app where a signal changes *behaviour* rather than producing an answer.
+Holding a phone up to read a menu at the wheel is the worst thing anything here could invite,
+and a viewfinder is an invitation.
+
+**Fail-safe by construction.** `ActivityTool.isDriving()` is bounded at two seconds and
+answers `false` on any delay, refusal, or unavailability. The photo library and Files paths
+are untouched — neither needs aiming. A scanner that silently stopped opening because a motion
+query hung would be a far worse bug than the one this prevents.
+
+### D-80 — the routing suite now compiles the real `Router`
+
+The old harness inlined **copies** of `Intent.swift` and `Tongues.swift`, so it could pass
+while the shipping router was broken. It is now assembled from the actual source files, with
+`Lookup` cut away at a boundary that is *found* rather than hardcoded — a hardcoded line
+number truncated `Router` mid-declaration the moment `Intent.swift` grew, and the suite then
+silently re-ran a **stale binary** and reported the previous failures, which reads exactly
+like a fix that did not work.
+
+Rebuild with `mkrouter.py`; 155 cases.
+
+---
+
 ## 10. Known open issues
 
 1. **`WeatherTool` is dead code** while `weatherIsUsable` is false. Deliberate, not an
@@ -1005,8 +1102,10 @@ call, not the next session's.
 3. **Keyword routing has gaps.** ~~"Do I have time for coffee?" routes to the clock.~~ That
    example is stale — it routes to chat, correctly, and has since the needles became
    multi-word. The general point stands: an unanticipated phrasing falls through to chat, and
-   adding one is a one-line change in `Router`. A 34-case truth table now covers the routes;
-   extend it rather than testing by hand.
+   adding one is a one-line change in `Router`. A **155-case** truth table now covers the
+   routes and is compiled against the real `Router` (D-80); extend it rather than testing by
+   hand. Semantic routing was measured as the fix for this and **rejected** — see the
+   `NLEmbedding` result in the README's dropped-features table.
 4. **Free-account provisioning expires every 7 days.** The app stops launching until rebuilt.
 5. **D-18's overflow path is unverified** and probably unreachable in normal use — see the
    section above. Written, correct on inspection, never observed running.
@@ -1022,7 +1121,19 @@ call, not the next session's.
    working without looking broken. If extraction stops firing, compare the extracted field
    against the `TextScanner` transcript — the likeliest cause is the model reformatting a
    value rather than copying it.
-9. **Superseded — kept for the measurement.** Hindi conversational support. Measured
+9. **`DetectLensSmudgeRequest` is unverified.** It ships **fail-safe, not trusted**:
+   `smudgenet-v1.E5.bundle` is absent from VisionCore on the build Mac, so every probe
+   returned ~0.00 with a console error, and the iPhone was unavailable at the time of
+   writing. `SceneReader.smudgeThreshold` sits at **0.65**, far above the ~0.0 a missing model
+   reports, so a broken model stays *silent* rather than telling the boss to wipe a clean
+   lens. **Worth re-checking on device** — photograph something through a deliberately
+   smeared lens and see whether the extra sentence appears. If it never does, the feature is
+   costing a Vision request for nothing and should be removed.
+10. **The sound classifier has never been tested against a real sound.** Its floor is
+   measured against silence, noise and a sine tone (D-77), all synthetic. Nobody has yet
+   pointed it at an actual doorbell, dog or smoke alarm. The floor may prove too high or too
+   low in a real room; it is one constant in `SoundListener`.
+11. **Superseded — kept for the measurement.** Hindi conversational support. Measured
    on 2026-08-15, not recalled: `SystemLanguageModel.supportedLanguages` returns 23
    languages and Hindi is not among them — `supportsLocale(hi_IN)` is `false`. Independently,
    `SpeechTranscriber.supportedLocales` returns 30 locales with **no** Hindi at all, so it
