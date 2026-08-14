@@ -143,24 +143,22 @@ model. Only conversational turns degrade. Half the app keeps working with the mo
 App Intent, Siri shortcuts, Control Centre control and Lock Screen widget all built and
 verified. Two spec items could not be met as written — see D-51 and D-52.
 
-### Document reading — stages 1 and 2 are in, and NOT verified on device
+### Document reading — stages 1 and 2 are in and verified on device
 
 `Vision/` is a feature after Phase C, in three stages. Stage 1 (`TextScanner`,
 `RecognizeDocumentsRequest`) and stage 2 (photo library and live camera entry points, routed
 through `Router`) are committed. **Stage 3 — `@Generable` structured extraction, receipt to
 merchant/date/total — is not started.**
 
-Everything about stage 2 that a compiler can check has been checked: it builds with zero
-warnings, installs, launches, and the Router truth table passes 34 cases. **Nothing has ever
-actually scanned anything.** Per §1 that means it is unverified, and it must not be described
-as working until someone points the camera at a page. The list of what to try is in the
-stage 2 commit message (`9648aac`).
+Confirmed by the owner on the 16 Pro on 2026-08-15: the camera route scans a page and FRIDAY
+reads it back. D-53's repetition fix was confirmed in the same pass — "what languages do you
+know" now answers and stops.
 
 ### Suggested next work
 
-Verify stage 2 on device and delete the temporary diagnostic (§10.7). Then stage 3, or
-hardening (Router phrasings, the denied-permission paths), then either Session 8's LiveKit
-bridge or App Store preparation, which needs a paid account.
+Stage 3 (`@Generable` receipt extraction), or hardening (Router phrasings, the
+denied-permission paths), then either Session 8's LiveKit bridge or App Store preparation,
+which needs a paid account. Hindi is now in progress — see §10.8.
 
 ---
 
@@ -441,18 +439,14 @@ call, not the next session's.
 4. **Free-account provisioning expires every 7 days.** The app stops launching until rebuilt.
 5. **D-18's overflow path is unverified** and probably unreachable in normal use — see the
    section above. Written, correct on inspection, never observed running.
-6. **Stage 2's scan has never run.** See §4. Builds, installs, launches, routes — never
-   actually read a page.
-7. **A temporary diagnostic is in the tree and must come out.**
-   `LanguageEngine.lastDiagnostic` and `streamProgress`, surfaced in `ContentView`'s footer,
-   marked TEMPORARY at every site. It exists because `LanguageEngineFailure.other` discards
-   `error.localizedDescription`, so five distinct faults — "Already responding", "Empty
-   reply", and the six `GenerationError` cases `classify` folds into `default` — reach the
-   user as one sentence and are recorded nowhere. Same treatment
-   `LiveActivityController.lastFailure` got in session 6: added to answer one question,
-   deleted once it has. Delete it once D-53 is confirmed on device.
-8. **`WeatherTool`, D-09 and the paid account** remain the three standing decisions.
-9. **Hindi is not possible for conversational turns, and this is a platform limit.** Measured
+6. **`LanguageEngineFailure.other` still discards its own description.** Five distinct faults
+   — "Already responding", "Empty reply", and the six `GenerationError` cases `classify`
+   folds into `default` — reach the user as one sentence and are recorded nowhere. That is
+   correct for the *spoken* line, which must stay in character, but it means the next
+   `.other` bug starts from zero again. The temporary diagnostic that found D-53 has been
+   deleted (it did its job); if another one is needed, that shape works and took ten minutes.
+7. **`WeatherTool`, D-09 and the paid account** remain the three standing decisions.
+8. **Hindi is not possible for conversational turns, and this is a platform limit.** Measured
    on 2026-08-15, not recalled: `SystemLanguageModel.supportedLanguages` returns 23
    languages and Hindi is not among them — `supportsLocale(hi_IN)` is `false`. Independently,
    `SpeechTranscriber.supportedLocales` returns 30 locales with **no** Hindi at all, so it

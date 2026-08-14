@@ -41,26 +41,6 @@ final class LanguageEngine {
     private(set) var partialSpoken = ""
     private(set) var isResponding = false
 
-    // MARK: - TEMPORARY DIAGNOSTIC
-    //
-    // Remove once the "taking too long" / "went sideways" pair is understood.
-    //
-    // It exists because `LanguageEngineFailure.other` carries
-    // `error.localizedDescription` and `spokenFallback` throws it away, so five
-    // distinct faults — "Already responding", "Empty reply", and the six
-    // `GenerationError` cases `classify` folds into `default` — all reach the
-    // user as one sentence and are recorded nowhere. Same shape as
-    // `LiveActivityController.lastFailure` (HANDOVER §8): added to answer one
-    // question, deleted once it has.
-
-    /// The real error behind the last failure, case name and all.
-    private(set) var lastDiagnostic: String?
-
-    /// How the in-flight turn is progressing. The 20s deadline lives in
-    /// `FridayEngine` and cannot otherwise tell whether it killed a wedged turn
-    /// or a working one — this is the difference between the two.
-    private(set) var streamProgress = ""
-
     private var session: LanguageModelSession
     private let model = SystemLanguageModel.default
 
@@ -173,9 +153,6 @@ final class LanguageEngine {
     /// because whatever the abandoned request left in it cannot be trusted.
     func abandonInFlight() {
         guard isResponding else { return }
-        // TEMPORARY DIAGNOSTIC. This is the important one: it says what the
-        // deadline actually killed.
-        lastDiagnostic = "deadline fired — \(streamProgress)"
         isResponding = false
         partialSpoken = ""
         resetPreservingPersona()
@@ -214,11 +191,6 @@ final class LanguageEngine {
         partialSpoken = ""
         defer { isResponding = false }
 
-        // TEMPORARY DIAGNOSTIC
-        let started = ContinuousClock.now
-        var chunks = 0
-        streamProgress = "no chunks yet"
-
         do {
             // Streaming yields `ResponseStream<FridayReply>.Snapshot`, NOT the
             // partial directly. `snapshot.content` is the
@@ -255,17 +227,9 @@ final class LanguageEngine {
                 if let mood = snapshot.content.tone {
                     tone = mood
                 }
-
-                // TEMPORARY DIAGNOSTIC. The elapsed time of the *last* chunk is
-                // the whole point: a turn still delivering chunks at 19s was
-                // long, not wedged, and the deadline killed working output.
-                chunks += 1
-                streamProgress = "\(chunks) chunks, \(spoken?.count ?? 0) chars, "
-                    + "last at \(Self.seconds(since: started))"
             }
 
             guard let spoken else {
-                lastDiagnostic = "Empty reply — \(streamProgress)"
                 throw LanguageEngineFailure.other("Empty reply")
             }
 
@@ -275,13 +239,6 @@ final class LanguageEngine {
 
         } catch let error as LanguageModelSession.GenerationError {
             let failure = Self.classify(error)
-
-            // TEMPORARY DIAGNOSTIC. `String(describing:)` gives the case name
-            // without a nine-case switch that would rot the moment Apple adds
-            // one; the description carries the framework's own wording.
-            lastDiagnostic = "\(Self.caseName(of: error)) — \(error.localizedDescription) "
-                + "[\(streamProgress)]"
-
             // Overflow is recoverable exactly once: reset, then retry the same
             // input on the fresh session so the turn isn't lost.
             if failure == .contextOverflow, allowingReset {
@@ -294,23 +251,8 @@ final class LanguageEngine {
         } catch let failure as LanguageEngineFailure {
             throw failure
         } catch {
-            // TEMPORARY DIAGNOSTIC
-            lastDiagnostic = "non-GenerationError \(type(of: error)) — "
-                + "\(error.localizedDescription) [\(streamProgress)]"
             throw LanguageEngineFailure.other(error.localizedDescription)
         }
-    }
-
-    // MARK: - TEMPORARY DIAGNOSTIC helpers
-
-    private static func caseName(of error: LanguageModelSession.GenerationError) -> String {
-        String(describing: error).prefix { $0 != "(" }.description
-    }
-
-    private static func seconds(since start: ContinuousClock.Instant) -> String {
-        let elapsed = ContinuousClock.now - start
-        return String(format: "%.1fs", Double(elapsed.components.seconds)
-                      + Double(elapsed.components.attoseconds) / 1e18)
     }
 
     // MARK: - Repetition

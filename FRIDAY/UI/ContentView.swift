@@ -477,24 +477,10 @@ struct ContentView: View {
     // MARK: - Footer
 
     private var footer: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 9) {
-                Text("SYSTEM")
-                Circle().frame(width: 2.5, height: 2.5)
-                Text(engineStateLabel)
-            }
-
-            // TEMPORARY DIAGNOSTIC — remove with `LanguageEngine.lastDiagnostic`
-            // once the timeout / "went sideways" pair is understood. The spoken
-            // fallbacks discard the real error, so this is the only place it is
-            // visible. Same treatment Session 6's `lastFailure` got.
-            if let diagnostic = engine.language.lastDiagnostic {
-                Text(diagnostic)
-                    .foregroundStyle(FridayTheme.fault.opacity(0.85))
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
-            }
+        HStack(spacing: 9) {
+            Text("SYSTEM")
+            Circle().frame(width: 2.5, height: 2.5)
+            Text(engineStateLabel)
         }
         .font(.system(size: 10, weight: .medium, design: .monospaced))
         .tracking(1.6)
